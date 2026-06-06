@@ -7,6 +7,7 @@ import connectDB from './config/db.js';
 import { protect } from './middleware/authMiddleware.js';
 import { login, logout, getMe } from './controllers/authController.js';
 import { getMedicines, getMedicineById, addMedicine, updateMedicine, getMedicineLogs } from './controllers/medicineController.js';
+import { postStockIn, postStockOut, postAdjustment, getHistory } from './controllers/inventoryController.js';
 
 // Load models for seeder
 import Pharmacy from './models/Pharmacy.js';
@@ -59,6 +60,11 @@ app.get('/api/medicines/:id', protect, getMedicineById);
 app.post('/api/medicines', protect, addMedicine);
 app.put('/api/medicines/:id', protect, updateMedicine);
 app.get('/api/medicines/:id/logs', protect, getMedicineLogs);
+
+app.post('/api/inventory/stock-in', protect, postStockIn);
+app.post('/api/inventory/stock-out', protect, postStockOut);
+app.post('/api/inventory/adjustment', protect, postAdjustment);
+app.get('/api/inventory/history', protect, getHistory);
 
 // Debug Seeder Route (for Phase 1 Manual Verification)
 app.post('/api/debug/seed', async (req, res) => {

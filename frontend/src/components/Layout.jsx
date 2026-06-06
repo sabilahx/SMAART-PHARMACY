@@ -52,6 +52,20 @@ export default function Layout() {
                             <span className="material-symbols-rounded text-lg">add_box</span>
                             <span>Add Medication</span>
                         </NavLink>
+
+                        <NavLink 
+                            to="/inventory/history" 
+                            className={({ isActive }) => 
+                                `flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all border ${
+                                    isActive 
+                                        ? 'bg-teal-50 text-teal-700 border-teal-100/50 shadow-sm shadow-teal-500/5' 
+                                        : 'text-slate-500 border-transparent hover:text-slate-800 hover:bg-slate-50'
+                                }`
+                            }
+                        >
+                            <span className="material-symbols-rounded text-lg">history</span>
+                            <span>Stock Movements</span>
+                        </NavLink>
                     </nav>
                 </div>
 

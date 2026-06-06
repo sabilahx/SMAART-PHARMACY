@@ -8,6 +8,9 @@ import MedicineList from './pages/MedicineList';
 import AddMedicine from './pages/AddMedicine';
 import EditMedicine from './pages/EditMedicine';
 import MedicineDetails from './pages/MedicineDetails';
+import InventoryHistory from './pages/InventoryHistory';
+import InventoryTransactionForm from './pages/InventoryTransactionForm';
+import TransactionDetails from './pages/TransactionDetails';
 
 export default function App() {
     return (
@@ -24,6 +27,9 @@ export default function App() {
                             <Route path="/medicines/add" element={<AddMedicine />} />
                             <Route path="/medicines/:id" element={<MedicineDetails />} />
                             <Route path="/medicines/edit/:id" element={<EditMedicine />} />
+                            <Route path="/inventory/history" element={<InventoryHistory />} />
+                            <Route path="/inventory/transaction-new" element={<InventoryTransactionForm />} />
+                            <Route path="/inventory/transaction/:id" element={<TransactionDetails />} />
                             
                             {/* Fallback routes redirection */}
                             <Route path="*" element={<Navigate to="/medicines" replace />} />

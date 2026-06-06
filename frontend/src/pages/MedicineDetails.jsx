@@ -25,8 +25,8 @@ export default function MedicineDetails() {
             const detailData = await detailRes.json();
             setMedicine(detailData);
 
-            // Fetch audit logs
-            const logsRes = await fetch(`/api/medicines/${id}/logs`);
+            // Fetch transaction history for this specific medicine
+            const logsRes = await fetch(`/api/inventory/history?medicineId=${id}`);
             if (logsRes.ok) {
                 const logsData = await logsRes.json();
                 setLogs(logsData);
@@ -48,25 +48,27 @@ export default function MedicineDetails() {
         return 'text-slate-400 bg-slate-100 border-slate-200/50';
     };
 
-    const getChangeTypeIcon = (changeType) => {
-        switch (changeType) {
-            case 'Create': return 'add_circle';
-            case 'StockUpdate': return 'inventory_2';
-            case 'StatusChange': return 'published_with_changes';
-            case 'PriceUpdate': return 'payments';
-            case 'InfoUpdate':
-            default: return 'info';
+    const getChangeTypeIcon = (type) => {
+        switch (type) {
+            case 'Stock In': return 'add_circle';
+            case 'Stock Out': return 'remove_circle';
+            case 'Adjustment': return 'published_with_changes';
+            case 'Expired': return 'report';
+            case 'Archived':
+            default:
+                return 'archive';
         }
     };
 
-    const getChangeTypeColor = (changeType) => {
-        switch (changeType) {
-            case 'Create': return 'text-teal-600 bg-teal-50 border-teal-100/50';
-            case 'StockUpdate': return 'text-sky-600 bg-sky-50 border-sky-100/50';
-            case 'StatusChange': return 'text-amber-600 bg-amber-50 border-amber-100/50';
-            case 'PriceUpdate': return 'text-purple-600 bg-purple-50 border-purple-100/50';
-            case 'InfoUpdate':
-            default: return 'text-slate-500 bg-slate-50 border-slate-150/40';
+    const getChangeTypeColor = (type) => {
+        switch (type) {
+            case 'Stock In': return 'text-teal-600 bg-teal-50 border-teal-100/50';
+            case 'Stock Out': return 'text-sky-600 bg-sky-50 border-sky-100/50';
+            case 'Adjustment': return 'text-purple-600 bg-purple-50 border-purple-100/50';
+            case 'Expired': return 'text-amber-600 bg-amber-50 border-amber-100/50';
+            case 'Archived':
+            default:
+                return 'text-slate-500 bg-slate-50 border-slate-150/40';
         }
     };
 
@@ -116,7 +118,7 @@ export default function MedicineDetails() {
                     </button>
                     <button 
                         onClick={() => navigate(`/medicines/edit/${medicine._id}`)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white font-bold text-xs rounded-xl hover:bg-teal-500 active:bg-teal-700 transition-all cursor-pointer shadow-md shadow-teal-500/10"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all cursor-pointer shadow-sm"
                     >
                         <span className="material-symbols-rounded text-sm">edit</span>
                         <span>Edit Details</span>
@@ -143,6 +145,34 @@ export default function MedicineDetails() {
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Value</span>
                             <span className="text-xl font-extrabold text-teal-600 mt-2">${parseFloat(assetValue).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             <span className="text-[9px] text-slate-400 mt-1">estimated asset valuation</span>
+                        </div>
+                    </div>
+
+                    {/* Quick Stock Actions */}
+                    <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
+                        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider ml-1">Inventory Management Shortcuts</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <button
+                                onClick={() => navigate(`/inventory/transaction-new?medicineId=${medicine._id}&type=stock-in`)}
+                                className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-500 transition-all cursor-pointer shadow-md shadow-teal-500/10"
+                            >
+                                <span className="material-symbols-rounded text-base">add_circle</span>
+                                <span>Stock In</span>
+                            </button>
+                            <button
+                                onClick={() => navigate(`/inventory/transaction-new?medicineId=${medicine._id}&type=stock-out`)}
+                                className="flex items-center justify-center gap-2 px-4 py-3 bg-sky-600 text-white rounded-xl text-xs font-bold hover:bg-sky-500 transition-all cursor-pointer shadow-md shadow-sky-500/10"
+                            >
+                                <span className="material-symbols-rounded text-base">remove_circle</span>
+                                <span>Stock Out</span>
+                            </button>
+                            <button
+                                onClick={() => navigate(`/inventory/transaction-new?medicineId=${medicine._id}&type=adjustment`)}
+                                className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 hover:text-slate-800 hover:border-slate-350 transition-all cursor-pointer shadow-sm"
+                            >
+                                <span className="material-symbols-rounded text-base">published_with_changes</span>
+                                <span>Adjust Stock</span>
+                            </button>
                         </div>
                     </div>
 
@@ -184,54 +214,48 @@ export default function MedicineDetails() {
 
                 {/* Right side: Auditing Timeline */}
                 <div className="lg:col-span-1 flex flex-col gap-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Inventory Audit Trail</h3>
-                    <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col gap-6 max-h-[500px] overflow-y-auto shadow-sm">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Ledger Transaction Logs</h3>
+                    <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col gap-6 max-h-[640px] overflow-y-auto shadow-sm">
                         {logs.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
                                 <span className="material-symbols-rounded text-2xl text-slate-350">history</span>
-                                <span className="text-[10px]">No audit history found.</span>
+                                <span className="text-[10px]">No transaction history logged yet.</span>
                             </div>
                         ) : (
                             <div className="relative border-l border-slate-100 ml-4 flex flex-col gap-6">
                                 {logs.map((log) => (
                                     <div key={log._id} className="relative pl-6">
                                         {/* Dot/Icon indicator */}
-                                        <div className={`absolute -left-3.5 top-0 w-7 h-7 rounded-lg border flex items-center justify-center text-[14px] ${getChangeTypeColor(log.changeType)} shadow-sm`}>
-                                            <span className="material-symbols-rounded">{getChangeTypeIcon(log.changeType)}</span>
+                                        <div className={`absolute -left-3.5 top-0 w-7 h-7 rounded-lg border flex items-center justify-center text-[14px] ${getChangeTypeColor(log.transactionType)} shadow-sm`}>
+                                            <span className="material-symbols-rounded">{getChangeTypeIcon(log.transactionType)}</span>
                                         </div>
                                         {/* Log Content */}
-                                        <div className="flex flex-col gap-1.5 pt-0.5">
+                                        <div className="flex flex-col gap-1.5 pt-0.5 animate-fadeIn">
                                             <div className="flex justify-between items-center gap-2">
-                                                <span className="text-[10px] font-bold text-slate-700">{log.changeType}</span>
+                                                <span 
+                                                    onClick={() => navigate(`/inventory/transaction/${log._id}`)}
+                                                    className="text-[10px] font-bold text-slate-700 hover:text-teal-655 hover:underline cursor-pointer"
+                                                >
+                                                    {log.transactionType}
+                                                </span>
                                                 <span className="text-[9px] font-semibold text-slate-400">{new Date(log.createdAt).toLocaleDateString()}</span>
                                             </div>
                                             <p className="text-[10px] text-slate-500 leading-normal">{log.notes}</p>
                                             
                                             {/* Details depending on action */}
-                                            {log.changeType === 'StockUpdate' && (
-                                                <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1 bg-slate-50 p-1.5 rounded-lg border border-slate-150/50 shadow-inner">
-                                                    <span>Stock:</span>
-                                                    <span className={`font-bold ${log.quantityChanged > 0 ? 'text-teal-600' : 'text-red-500'}`}>
-                                                        {log.quantityChanged > 0 ? `+${log.quantityChanged}` : log.quantityChanged}
-                                                    </span>
-                                                    <span>({log.oldStock} → {log.newStock})</span>
-                                                </div>
+                                            <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1 bg-slate-50 p-1.5 rounded-lg border border-slate-150/50 shadow-inner">
+                                                <span>Qty:</span>
+                                                <span className={`font-bold ${log.quantityChanged > 0 ? 'text-teal-600' : log.quantityChanged < 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                                                    {log.quantityChanged > 0 ? `+${log.quantityChanged.toLocaleString()}` : log.quantityChanged.toLocaleString()}
+                                                </span>
+                                                {log.reason && <span>({log.reason})</span>}
+                                            </div>
+                                            
+                                            {log.batchNumber && (
+                                                <span className="text-[8px] text-slate-400 font-mono">Batch: {log.batchNumber}</span>
                                             )}
-                                            {log.changeType === 'StatusChange' && (
-                                                <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1 bg-slate-50 p-1.5 rounded-lg border border-slate-150/50 shadow-inner">
-                                                    <span>Status:</span>
-                                                    <span className="line-through">{log.oldStatus}</span>
-                                                    <span className="material-symbols-rounded text-[9px]">arrow_right_alt</span>
-                                                    <span className="font-bold text-slate-600">{log.newStatus}</span>
-                                                </div>
-                                            )}
-                                            {log.changeType === 'PriceUpdate' && (
-                                                <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1 bg-slate-50 p-1.5 rounded-lg border border-slate-150/50 shadow-inner">
-                                                    <span>Cost:</span>
-                                                    <span>${log.oldPrice?.toFixed(2)} → ${log.newPrice?.toFixed(2)}</span>
-                                                </div>
-                                            )}
-                                            <span className="text-[8px] font-bold text-slate-400 mt-0.5">By: {log.userId?.username || 'System Seed'}</span>
+
+                                            <span className="text-[8px] font-bold text-slate-450 mt-0.5">By: {log.userId?.username || 'Seed'}</span>
                                         </div>
                                     </div>
                                 ))}
