@@ -44,7 +44,6 @@ export default function AddMedicine() {
             if (!res.ok) {
                 throw new Error(data.message || 'Failed to add medication record');
             }
-            alert('Medication added successfully');
             navigate('/medicines');
         } catch (err) {
             setError(err.message);
@@ -57,60 +56,60 @@ export default function AddMedicine() {
         <div className="max-w-2xl mx-auto flex flex-col gap-8">
             {/* Header */}
             <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                    <span className="hover:text-slate-300 cursor-pointer" onClick={() => navigate('/medicines')}>Stock Ledger</span>
+                <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <span className="hover:text-slate-600 cursor-pointer" onClick={() => navigate('/medicines')}>Stock Ledger</span>
                     <span className="material-symbols-rounded text-sm">chevron_right</span>
-                    <span className="text-slate-300">Add Medication</span>
+                    <span className="text-slate-600">Add Medication</span>
                 </div>
-                <h2 className="text-xl font-bold text-slate-100 font-title mt-1">Register New Medication</h2>
-                <p className="text-xs text-slate-400">Initialize a new stock record inside your pharmacy tenant database.</p>
+                <h2 className="text-xl font-bold text-slate-800 font-title mt-1">Register New Medication</h2>
+                <p className="text-xs text-slate-400">Initialize a new stock record inside your pharmacy store database.</p>
             </div>
 
             {/* Error Banner */}
             {error && (
-                <div className="flex items-start gap-3 p-4 bg-red-950/40 border border-red-900/30 rounded-xl text-xs text-red-400">
+                <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
                     <span className="material-symbols-rounded text-sm mt-0.5">report</span>
                     <span>{error}</span>
                 </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 flex flex-col gap-6 shadow-sm">
+            <form onSubmit={handleSubmit} className="bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 flex flex-col gap-6 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Name */}
                     <div className="flex flex-col gap-1.5 md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-300">Medication Name *</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Medication Name *</label>
                         <input 
                             type="text"
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
                             placeholder="Atorvastatin 20mg, Amoxicillin 500mg..."
-                            className="bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-4 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-all"
+                            className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white transition-all shadow-inner shadow-slate-100"
                         />
                     </div>
 
                     {/* NDC Code */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-slate-300">NDC Code *</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">NDC Code *</label>
                         <input 
                             type="text"
                             name="ndc"
                             value={formData.ndc}
                             onChange={handleChange}
                             placeholder="00000-0000-00"
-                            className="bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-4 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-all font-mono"
+                            className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white transition-all font-mono shadow-inner shadow-slate-100"
                         />
                     </div>
 
                     {/* Category */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-slate-300">Category / Class</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Category / Class</label>
                         <select 
                             name="category"
                             value={formData.category}
                             onChange={handleChange}
-                            className="bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-4 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 transition-all"
+                            className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-xs text-slate-700 focus:outline-none focus:border-teal-500 focus:bg-white transition-all shadow-sm"
                         >
                             <option value="General">General</option>
                             <option value="Cardiovascular">Cardiovascular</option>
@@ -125,7 +124,7 @@ export default function AddMedicine() {
 
                     {/* Cost per unit */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-slate-300">Unit Cost ($) *</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Unit Cost ($) *</label>
                         <input 
                             type="number"
                             step="0.01"
@@ -133,49 +132,49 @@ export default function AddMedicine() {
                             value={formData.price}
                             onChange={handleChange}
                             placeholder="0.00"
-                            className="bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-4 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-all"
+                            className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white transition-all shadow-inner shadow-slate-100"
                         />
                     </div>
 
                     {/* Initial stock */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-slate-300">Initial Stock</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Initial Stock</label>
                         <input 
                             type="number"
                             name="stock"
                             value={formData.stock}
                             onChange={handleChange}
                             placeholder="0"
-                            className="bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-4 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-all"
+                            className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white transition-all shadow-inner shadow-slate-100"
                         />
                     </div>
 
                     {/* Supplier */}
                     <div className="flex flex-col gap-1.5 md:col-span-2">
-                        <label className="text-xs font-semibold text-slate-300">Supplier Name</label>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Supplier Name</label>
                         <input 
                             type="text"
                             name="supplier"
                             value={formData.supplier}
                             onChange={handleChange}
                             placeholder="McKesson Corp, Cardinal Health, Medline..."
-                            className="bg-slate-950 border border-slate-800 rounded-lg py-2.5 px-4 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-all"
+                            className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white transition-all shadow-inner shadow-slate-100"
                         />
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-3 mt-6 border-t border-slate-800 pt-6">
+                <div className="flex justify-end gap-3 mt-6 border-t border-slate-100 pt-6">
                     <button 
                         type="button"
                         onClick={() => navigate('/medicines')}
-                        className="px-5 py-2.5 rounded-lg border border-slate-800 text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800 hover:border-slate-700 transition-all cursor-pointer"
+                        className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer shadow-sm shadow-slate-100"
                     >
                         Cancel
                     </button>
                     <button 
                         type="submit"
                         disabled={isSubmitting}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 text-slate-950 font-semibold text-xs rounded-lg hover:bg-emerald-400 active:bg-emerald-600 disabled:opacity-50 transition-all cursor-pointer"
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-600 text-white font-bold text-xs rounded-xl hover:bg-teal-500 active:bg-teal-700 disabled:opacity-50 shadow-md shadow-teal-500/10 transition-all cursor-pointer"
                     >
                         {isSubmitting && <span className="material-symbols-rounded animate-spin text-sm">sync</span>}
                         <span>Save Medication</span>
