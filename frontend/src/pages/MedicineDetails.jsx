@@ -1,6 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
+const TYPE_CONFIG = {
+    'Stock In':    { icon: 'add_circle',            color: '#34d399', bg: 'rgba(52,211,153,0.08)',  border: 'rgba(52,211,153,0.18)'  },
+    'Stock Out':   { icon: 'remove_circle',          color: '#60a5fa', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.18)'  },
+    'Adjustment':  { icon: 'published_with_changes', color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.18)' },
+    'Expired':     { icon: 'event_busy',             color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.18)'  },
+    'Archived':    { icon: 'archive',                color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.15)' },
+};
+
+const STATUS_CONFIG = {
+    Active:   { color: '#34d399', bg: 'rgba(52,211,153,0.08)',  border: 'rgba(52,211,153,0.18)'  },
+    Inactive: { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.18)'  },
+    Archived: { color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.15)' },
+};
+
+const CATEGORY_COLORS = {
+    Cardiovascular: '#f87171', 'Anti-infective': '#34d399', Endocrine: '#60a5fa',
+    Emergency: '#f59e0b', Analgesic: '#a78bfa', Neurological: '#e879f9',
+    Gastrointestinal: '#22d3ee', General: '#00c2cc',
+};
+
+const CATEGORY_ICONS = {
+    Cardiovascular: 'favorite', 'Anti-infective': 'coronavirus', Endocrine: 'opacity',
+    Emergency: 'emergency', Analgesic: 'healing', Neurological: 'psychology',
+    Gastrointestinal: 'bubble_chart', General: 'medication',
+};
+
+function DetailField({ label, value, mono }) {
+    return (
+        <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>{label}</span>
+            <span className={`text-sm font-semibold ${mono ? 'font-mono' : ''}`} style={{ color: 'var(--text-primary)' }}>{value || '—'}</span>
+        </div>
+    );
+}
+
 export default function MedicineDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -9,256 +44,289 @@ export default function MedicineDetails() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const fetchDetails = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            // Fetch medicine details
-            const detailRes = await fetch(`/api/medicines/${id}`);
-            if (!detailRes.ok) {
-                if (detailRes.status === 401) {
-                    navigate('/login');
-                    return;
-                }
-                throw new Error('Failed to retrieve medication details.');
-            }
-            const detailData = await detailRes.json();
-            setMedicine(detailData);
-
-            // Fetch transaction history for this specific medicine
-            const logsRes = await fetch(`/api/inventory/history?medicineId=${id}`);
-            if (logsRes.ok) {
-                const logsData = await logsRes.json();
-                setLogs(logsData);
-            }
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        fetchDetails();
-    }, [id]);
+        const load = async () => {
+            setLoading(true); setError(null);
+            try {
+                const detRes = await fetch(`/api/medicines/${id}`);
+                if (!detRes.ok) { if (detRes.status === 401) navigate('/login'); throw new Error('Failed to load medicine.'); }
+                setMedicine(await detRes.json());
+                const logRes = await fetch(`/api/inventory/history?medicineId=${id}`);
+                if (logRes.ok) setLogs(await logRes.json());
+            } catch (err) { setError(err.message); }
+            finally { setLoading(false); }
+        };
+        load();
+    }, [id, navigate]);
 
-    const getStatusColor = (status) => {
-        if (status === 'Active') return 'text-teal-600 bg-teal-50 border-teal-150/40';
-        if (status === 'Inactive') return 'text-amber-600 bg-amber-50 border-amber-150/40';
-        return 'text-slate-400 bg-slate-100 border-slate-200/50';
-    };
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center py-40 gap-3" style={{ color: 'var(--text-muted)' }}>
+            <span className="material-symbols-rounded animate-spin text-3xl" style={{ color: '#00c2cc' }}>sync</span>
+            <span className="text-sm">Loading medicine details…</span>
+        </div>
+    );
 
-    const getChangeTypeIcon = (type) => {
-        switch (type) {
-            case 'Stock In': return 'add_circle';
-            case 'Stock Out': return 'remove_circle';
-            case 'Adjustment': return 'published_with_changes';
-            case 'Expired': return 'report';
-            case 'Archived':
-            default:
-                return 'archive';
-        }
-    };
+    if (error) return (
+        <div className="flex flex-col items-center justify-center py-40 gap-4">
+            <span className="material-symbols-rounded text-4xl" style={{ color: '#f87171' }}>error</span>
+            <span className="text-sm" style={{ color: '#fca5a5' }}>{error}</span>
+            <button onClick={() => navigate('/medicines')} className="px-4 py-2 rounded-xl text-xs font-bold cursor-pointer"
+                style={{ background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.15)', color: '#f87171' }}>
+                Back to Ledger
+            </button>
+        </div>
+    );
 
-    const getChangeTypeColor = (type) => {
-        switch (type) {
-            case 'Stock In': return 'text-teal-600 bg-teal-50 border-teal-100/50';
-            case 'Stock Out': return 'text-sky-600 bg-sky-50 border-sky-100/50';
-            case 'Adjustment': return 'text-purple-600 bg-purple-50 border-purple-100/50';
-            case 'Expired': return 'text-amber-600 bg-amber-50 border-amber-100/50';
-            case 'Archived':
-            default:
-                return 'text-slate-500 bg-slate-50 border-slate-150/40';
-        }
-    };
+    const catColor = CATEGORY_COLORS[medicine.category] || '#00c2cc';
+    const catIcon = CATEGORY_ICONS[medicine.category] || 'medication';
+    const statusCfg = STATUS_CONFIG[medicine.status] || STATUS_CONFIG.Archived;
+    const assetValue = medicine.stock * medicine.price;
 
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center p-20 text-slate-400 font-medium gap-3">
-                <span className="material-symbols-rounded animate-spin text-2xl text-teal-500">sync</span>
-                <span className="text-xs">Loading medication details...</span>
-            </div>
-        );
-    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    thirtyDaysFromNow.setHours(23, 59, 59, 999);
 
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center p-20 text-red-500 font-medium gap-3 max-w-md mx-auto">
-                <span className="material-symbols-rounded text-2xl text-red-400">error</span>
-                <span className="text-xs text-center">{error}</span>
-                <button onClick={() => navigate('/medicines')} className="mt-4 px-4 py-2 bg-slate-150 text-slate-600 border border-slate-250 rounded-xl text-xs hover:bg-slate-200 cursor-pointer">
-                    Back to Ledger
-                </button>
-            </div>
-        );
-    }
-
-    const assetValue = (medicine.stock * medicine.price).toFixed(2);
+    const expDate = medicine.expiryDate ? new Date(medicine.expiryDate) : null;
+    const isExpired = expDate ? expDate < today : false;
+    const isNearExpiry = expDate ? (expDate >= today && expDate <= thirtyDaysFromNow) : false;
 
     return (
-        <div className="max-w-5xl mx-auto flex flex-col gap-8">
-            {/* Navigation Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-xs text-slate-400 font-bold uppercase tracking-wider">
-                        <span className="hover:text-slate-600 cursor-pointer" onClick={() => navigate('/medicines')}>Stock Ledger</span>
-                        <span className="material-symbols-rounded text-sm">chevron_right</span>
-                        <span className="text-slate-600">{medicine.name}</span>
+        <div className="max-w-6xl mx-auto flex flex-col gap-7 animate-fade-in relative z-10">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
+                        <button onClick={() => navigate('/medicines')} className="hover:text-[#00c2cc] transition-colors cursor-pointer">Ledger</button>
+                        <span className="material-symbols-rounded text-xs">chevron_right</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>{medicine.name}</span>
                     </div>
-                    <h2 className="text-xl font-bold text-slate-800 font-title mt-1">{medicine.name}</h2>
-                    <p className="text-xs text-slate-400">View detailed metrics and chronological audit logs.</p>
+                    <h2 className="text-3xl font-extrabold tracking-tight mt-1 text-white" style={{ fontFamily: "'Lora', serif", letterSpacing: '-0.02em' }}>
+                        {medicine.name}
+                    </h2>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => navigate('/medicines')}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer shadow-sm shadow-slate-100"
-                    >
-                        <span className="material-symbols-rounded text-sm">arrow_back</span>
-                        <span>Back to Ledger</span>
-                    </button>
-                    <button 
+
+                <div className="flex items-center gap-2">
+                    <button
                         onClick={() => navigate(`/medicines/edit/${medicine._id}`)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all cursor-pointer shadow-sm"
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200"
+                        style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                     >
-                        <span className="material-symbols-rounded text-sm">edit</span>
+                        <span className="material-symbols-rounded text-base">edit</span>
                         <span>Edit Details</span>
+                    </button>
+                    <button
+                        onClick={() => navigate('/medicines')}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200"
+                        style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)' }}
+                    >
+                        <span className="material-symbols-rounded text-base">arrow_back</span>
+                        <span>Back</span>
                     </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left side: Information Cards */}
-                <div className="lg:col-span-2 flex flex-col gap-6">
-                    {/* Primary stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Stock</span>
-                            <span className="text-xl font-extrabold text-slate-800 mt-2">{medicine.stock.toLocaleString()}</span>
-                            <span className="text-[9px] text-slate-400 mt-1">units on hand</span>
-                        </div>
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Unit Cost</span>
-                            <span className="text-xl font-extrabold text-slate-800 mt-2">${medicine.price.toFixed(2)}</span>
-                            <span className="text-[9px] text-slate-400 mt-1">USD acquisition cost</span>
-                        </div>
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Value</span>
-                            <span className="text-xl font-extrabold text-teal-600 mt-2">${parseFloat(assetValue).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            <span className="text-[9px] text-slate-400 mt-1">estimated asset valuation</span>
-                        </div>
+            {/* Expiry alerts banner */}
+            {isExpired && (
+                <div className="flex items-center gap-3 p-4 rounded-xl text-sm animate-fade-in"
+                    style={{ background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.15)', color: '#fca5a5' }}>
+                    <span className="material-symbols-rounded text-lg text-[#f87171]">event_busy</span>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-xs">MEDICATION EXPIRED</span>
+                        <span className="text-[11px] opacity-80 font-medium">This medicine expired on {new Date(medicine.expiryDate).toLocaleDateString()}. Please record an Expired Waste transaction to adjust stock and dispose of it safely.</span>
                     </div>
-
-                    {/* Quick Stock Actions */}
-                    <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col gap-4">
-                        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider ml-1">Inventory Management Shortcuts</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <button
-                                onClick={() => navigate(`/inventory/transaction-new?medicineId=${medicine._id}&type=stock-in`)}
-                                className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-500 transition-all cursor-pointer shadow-md shadow-teal-500/10"
-                            >
-                                <span className="material-symbols-rounded text-base">add_circle</span>
-                                <span>Stock In</span>
-                            </button>
-                            <button
-                                onClick={() => navigate(`/inventory/transaction-new?medicineId=${medicine._id}&type=stock-out`)}
-                                className="flex items-center justify-center gap-2 px-4 py-3 bg-sky-600 text-white rounded-xl text-xs font-bold hover:bg-sky-500 transition-all cursor-pointer shadow-md shadow-sky-500/10"
-                            >
-                                <span className="material-symbols-rounded text-base">remove_circle</span>
-                                <span>Stock Out</span>
-                            </button>
-                            <button
-                                onClick={() => navigate(`/inventory/transaction-new?medicineId=${medicine._id}&type=adjustment`)}
-                                className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 hover:text-slate-800 hover:border-slate-350 transition-all cursor-pointer shadow-sm"
-                            >
-                                <span className="material-symbols-rounded text-base">published_with_changes</span>
-                                <span>Adjust Stock</span>
-                            </button>
-                        </div>
+                </div>
+            )}
+            {!isExpired && isNearExpiry && (
+                <div className="flex items-center gap-3 p-4 rounded-xl text-sm animate-fade-in"
+                    style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.15)', color: '#fcd34d' }}>
+                    <span className="material-symbols-rounded text-lg text-[#f59e0b]">warning</span>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-xs">EXPIRING SOON</span>
+                        <span className="text-[11px] opacity-80 font-medium font-sans">This medicine expires on {new Date(medicine.expiryDate).toLocaleDateString()}. Monitor stock closely to prevent waste.</span>
                     </div>
+                </div>
+            )}
 
-                    {/* Metadata details */}
-                    <div className="bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 flex flex-col gap-6 shadow-sm">
-                        <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-3">Medication Record Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8 text-xs">
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Medication Name</span>
-                                <span className="text-slate-800 font-bold text-sm">{medicine.name}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Left column */}
+                <div className="lg:col-span-2 flex flex-col gap-4">
+                    {/* Medicine header card */}
+                    <div
+                        className="rounded-lg p-5 relative overflow-hidden backdrop-blur-md"
+                        style={{
+                            background: 'rgba(15,20,32,0.3)',
+                        }}
+                    >
+                        {/* Glow backing */}
+                        <div className="absolute top-0 right-0 w-48 h-48 pointer-events-none rounded-full" 
+                            style={{ background: `radial-gradient(circle, ${catColor}08 0%, transparent 70%)`, filter: 'blur(30px)' }} />
+
+                        <div className="flex items-start gap-4 relative z-10">
+                            <div
+                                className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                                style={{ background: `${catColor}08` }}
+                            >
+                                <span className="material-symbols-rounded text-xl" style={{ color: catColor, fontVariationSettings: "'FILL' 1" }}>{catIcon}</span>
                             </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">NDC Code</span>
-                                <span className="text-slate-600 font-mono text-xs">{medicine.ndc}</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Category / Class</span>
-                                <span className="text-slate-700 font-semibold">{medicine.category}</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Supplier</span>
-                                <span className="text-slate-700 font-semibold">{medicine.supplier || 'N/A'}</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Status</span>
-                                <div>
-                                    <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-bold border ${getStatusColor(medicine.status)} shadow-sm`}>
+                            <div className="flex flex-col gap-1 flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span
+                                        className="px-2 py-0.5 rounded text-[8px] font-bold"
+                                        style={{ background: statusCfg.bg, color: statusCfg.color }}
+                                    >
                                         {medicine.status}
                                     </span>
+                                    <span
+                                        className="px-2 py-0.5 rounded text-[8px] font-bold"
+                                        style={{ background: `${catColor}08`, color: catColor }}
+                                    >
+                                        {medicine.category}
+                                    </span>
+                                </div>
+                                <div className="font-mono text-[10px] opacity-60" style={{ color: 'var(--text-muted)' }}>NDC: {medicine.ndc}</div>
+                                {medicine.supplier && (
+                                    <div className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                                        <span className="opacity-60">Supplier: </span>
+                                        <strong className="text-white">{medicine.supplier}</strong>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* KPI metrics row */}
+                    <div className="grid grid-cols-3 gap-3">
+                        {[
+                            { label: 'Stock Level', value: medicine.stock.toLocaleString('en-IN'), sub: 'units on hand', color: medicine.stock === 0 ? '#f87171' : medicine.stock < 20 ? '#f59e0b' : '#34d399', icon: 'inventory' },
+                            { label: 'Unit Cost', value: `₹${medicine.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: 'per unit', color: '#00c2cc', icon: 'payments' },
+                            { label: 'Asset Value', value: `₹${assetValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, sub: 'total valuation', color: '#a78bfa', icon: 'account_balance_wallet' },
+                        ].map(k => (
+                            <div key={k.label} className="rounded-lg p-4 flex flex-col gap-2 backdrop-blur-md"
+                                style={{ background: 'rgba(15,20,32,0.3)' }}>
+                                <div className="w-7 h-7 rounded-md flex items-center justify-center"
+                                    style={{ background: `${k.color}08` }}>
+                                    <span className="material-symbols-rounded text-base" style={{ color: k.color, fontVariationSettings: "'FILL' 1" }}>{k.icon}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-xl md:text-2xl font-black text-white tracking-tighter" style={{ fontFamily: "'Lora', serif", leading: 'none' }}>{k.value}</span>
+                                    <span className="text-[9px] font-bold mt-0.5" style={{ color: 'var(--text-secondary)' }}>{k.label}</span>
+                                    <span className="text-[8px] opacity-50 mt-0.5" style={{ color: 'var(--text-muted)' }}>{k.sub}</span>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Created At</span>
-                                <span className="text-slate-600">{new Date(medicine.createdAt).toLocaleString()}</span>
-                            </div>
+                        ))}
+                    </div>
+
+                    {/* Stock actions */}
+                    <div className="rounded-lg p-4 flex flex-col gap-3 backdrop-blur-md"
+                        style={{ background: 'rgba(15,20,32,0.3)' }}>
+                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Inventory Actions</span>
+                        <div className="grid grid-cols-3 gap-3">
+                            {[
+                                { label: 'Stock In', type: 'stock-in', icon: 'add_circle', color: '#34d399' },
+                                { label: 'Stock Out', type: 'stock-out', icon: 'remove_circle', color: '#60a5fa' },
+                                { label: 'Adjust Stock', type: 'adjustment', icon: 'published_with_changes', color: '#a78bfa' },
+                            ].map(a => (
+                                <button key={a.type}
+                                    onClick={() => navigate(`/inventory/transaction-new?medicineId=${medicine._id}&type=${a.type}`)}
+                                    className="flex flex-col items-center gap-1.5 py-2.5 rounded-lg cursor-pointer transition-all duration-200"
+                                    style={{ background: `${a.color}06`, color: a.color }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = `${a.color}10`; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = `${a.color}06`; }}
+                                >
+                                    <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>{a.icon}</span>
+                                    <span className="text-[10px] font-bold">{a.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Details grid */}
+                    <div className="rounded-lg p-5 flex flex-col gap-4 backdrop-blur-md"
+                        style={{ background: 'rgba(15,20,32,0.3)' }}>
+                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Record Overview</span>
+                        <div className="grid grid-cols-2 gap-4">
+                            <DetailField label="Medicine Name" value={medicine.name} />
+                            <DetailField label="NDC Code" value={medicine.ndc} mono />
+                            <DetailField label="Category" value={medicine.category} />
+                            <DetailField label="Supplier" value={medicine.supplier} />
+                            <DetailField label="Status" value={medicine.status} />
+                            <DetailField label="Expiry Date" value={medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'No Expiry Set'} />
+                            <DetailField label="Registered" value={new Date(medicine.createdAt).toLocaleDateString()} />
                         </div>
                     </div>
                 </div>
 
-                {/* Right side: Auditing Timeline */}
-                <div className="lg:col-span-1 flex flex-col gap-4">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Ledger Transaction Logs</h3>
-                    <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col gap-6 max-h-[640px] overflow-y-auto shadow-sm">
+                {/* Right column — transaction timeline */}
+                <div className="flex flex-col gap-3">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
+                        Transaction History ({logs.length})
+                    </span>
+                    <div
+                        className="rounded-lg flex-1 overflow-hidden backdrop-blur-md"
+                        style={{ background: 'rgba(15,20,32,0.3)', maxHeight: '600px', overflowY: 'auto' }}
+                    >
                         {logs.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
-                                <span className="material-symbols-rounded text-2xl text-slate-350">history</span>
-                                <span className="text-[10px]">No transaction history logged yet.</span>
+                            <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: 'var(--text-muted)' }}>
+                                <span className="material-symbols-rounded text-4xl opacity-55">history</span>
+                                <span className="text-xs">No records available</span>
                             </div>
                         ) : (
-                            <div className="relative border-l border-slate-100 ml-4 flex flex-col gap-6">
-                                {logs.map((log) => (
-                                    <div key={log._id} className="relative pl-6">
-                                        {/* Dot/Icon indicator */}
-                                        <div className={`absolute -left-3.5 top-0 w-7 h-7 rounded-lg border flex items-center justify-center text-[14px] ${getChangeTypeColor(log.transactionType)} shadow-sm`}>
-                                            <span className="material-symbols-rounded">{getChangeTypeIcon(log.transactionType)}</span>
-                                        </div>
-                                        {/* Log Content */}
-                                        <div className="flex flex-col gap-1.5 pt-0.5 animate-fadeIn">
-                                            <div className="flex justify-between items-center gap-2">
-                                                <span 
-                                                    onClick={() => navigate(`/inventory/transaction/${log._id}`)}
-                                                    className="text-[10px] font-bold text-slate-700 hover:text-teal-655 hover:underline cursor-pointer"
-                                                >
-                                                    {log.transactionType}
-                                                </span>
-                                                <span className="text-[9px] font-semibold text-slate-400">{new Date(log.createdAt).toLocaleDateString()}</span>
-                                            </div>
-                                            <p className="text-[10px] text-slate-500 leading-normal">{log.notes}</p>
-                                            
-                                            {/* Details depending on action */}
-                                            <div className="text-[9px] text-slate-400 mt-1 flex items-center gap-1 bg-slate-50 p-1.5 rounded-lg border border-slate-150/50 shadow-inner">
-                                                <span>Qty:</span>
-                                                <span className={`font-bold ${log.quantityChanged > 0 ? 'text-teal-600' : log.quantityChanged < 0 ? 'text-red-500' : 'text-slate-500'}`}>
-                                                    {log.quantityChanged > 0 ? `+${log.quantityChanged.toLocaleString()}` : log.quantityChanged.toLocaleString()}
-                                                </span>
-                                                {log.reason && <span>({log.reason})</span>}
-                                            </div>
-                                            
-                                            {log.batchNumber && (
-                                                <span className="text-[8px] text-slate-400 font-mono">Batch: {log.batchNumber}</span>
-                                            )}
+                            <div className="p-4 flex flex-col gap-0">
+                                {/* Timeline line */}
+                                <div className="relative">
+                                    <div className="absolute left-3.5 top-0 bottom-0 w-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                                    <div className="flex flex-col gap-4">
+                                        {logs.map((log) => {
+                                            const cfg = TYPE_CONFIG[log.transactionType] || TYPE_CONFIG.Archived;
+                                            const qty = log.quantityChanged;
+                                            return (
+                                                <div key={log._id} className="relative pl-10">
+                                                    {/* Timeline dot */}
+                                                    <div
+                                                        className="absolute left-0 top-1 w-7 h-7 rounded-lg flex items-center justify-center"
+                                                        style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}
+                                                    >
+                                                        <span className="material-symbols-rounded text-sm" style={{ color: cfg.color, fontVariationSettings: "'FILL' 1" }}>{cfg.icon}</span>
+                                                    </div>
 
-                                            <span className="text-[8px] font-bold text-slate-450 mt-0.5">By: {log.userId?.username || 'Seed'}</span>
-                                        </div>
+                                                    {/* Content */}
+                                                    <div className="flex flex-col gap-1.5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                                        <div className="flex items-center justify-between">
+                                                            <span
+                                                                className="text-xs font-semibold cursor-pointer hover:text-[#00c2cc] transition-colors"
+                                                                style={{ color: cfg.color }}
+                                                                onClick={() => navigate(`/inventory/transaction/${log._id}`)}
+                                                            >
+                                                                {log.transactionType}
+                                                            </span>
+                                                            <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                                                                {new Date(log.createdAt).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+
+                                                        <div
+                                                            className="flex items-center gap-2 px-2.5 py-1 rounded-lg"
+                                                            style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}
+                                                        >
+                                                            <span className="text-xs font-bold" style={{ color: qty > 0 ? '#34d399' : qty < 0 ? '#f87171' : 'var(--text-muted)' }}>
+                                                                {qty > 0 ? `+${qty.toLocaleString('en-IN')}` : qty.toLocaleString('en-IN')}
+                                                            </span>
+                                                            {log.reason && <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>· {log.reason}</span>}
+                                                        </div>
+
+                                                        {log.notes && <p className="text-[10px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>{log.notes}</p>}
+                                                        {log.batchNumber && <span className="text-[9px] font-mono" style={{ color: 'var(--text-muted)' }}>Batch: {log.batchNumber}</span>}
+                                                        <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Authorized: {log.userId?.username || 'System'}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                ))}
+                                </div>
                             </div>
                         )}
                     </div>

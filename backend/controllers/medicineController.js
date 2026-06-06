@@ -40,7 +40,7 @@ export const getMedicineById = async (req, res) => {
 
 // Create a new medicine record
 export const addMedicine = async (req, res) => {
-    const { name, ndc, category, stock, price, supplier } = req.body;
+    const { name, ndc, category, stock, price, supplier, expiryDate } = req.body;
     try {
         if (!name || !ndc || price === undefined) {
             return res.status(400).json({ message: 'Name, NDC, and Price are required' });
@@ -54,6 +54,7 @@ export const addMedicine = async (req, res) => {
             price,
             supplier,
             status: 'Active',
+            expiryDate: expiryDate ? new Date(expiryDate) : undefined,
             pharmacyId: req.user.pharmacyId, // Always bind to user's pharmacy
             updatedBy: req.user.id
         });
@@ -83,7 +84,7 @@ export const addMedicine = async (req, res) => {
 
 // Update a medicine record (with status update support, preventing hard delete)
 export const updateMedicine = async (req, res) => {
-    const { name, ndc, category, stock, price, supplier, status } = req.body;
+    const { name, ndc, category, stock, price, supplier, status, expiryDate } = req.body;
     try {
         const medicine = await Medicine.findOne({
             _id: req.params.id,
@@ -105,6 +106,7 @@ export const updateMedicine = async (req, res) => {
         if (stock !== undefined) medicine.stock = stock;
         if (price !== undefined) medicine.price = price;
         if (supplier !== undefined) medicine.supplier = supplier;
+        if (expiryDate !== undefined) medicine.expiryDate = expiryDate ? new Date(expiryDate) : undefined;
         
         if (status !== undefined) {
             if (!['Active', 'Inactive', 'Archived'].includes(status)) {

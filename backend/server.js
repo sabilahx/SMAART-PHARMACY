@@ -8,6 +8,7 @@ import { protect } from './middleware/authMiddleware.js';
 import { login, logout, getMe } from './controllers/authController.js';
 import { getMedicines, getMedicineById, addMedicine, updateMedicine, getMedicineLogs } from './controllers/medicineController.js';
 import { postStockIn, postStockOut, postAdjustment, getHistory } from './controllers/inventoryController.js';
+import { getDashboardData } from './controllers/analyticsController.js';
 
 // Load models for seeder
 import Pharmacy from './models/Pharmacy.js';
@@ -65,6 +66,7 @@ app.post('/api/inventory/stock-in', protect, postStockIn);
 app.post('/api/inventory/stock-out', protect, postStockOut);
 app.post('/api/inventory/adjustment', protect, postAdjustment);
 app.get('/api/inventory/history', protect, getHistory);
+app.get('/api/analytics/dashboard', protect, getDashboardData);
 
 // Debug Seeder Route (for Phase 1 Manual Verification)
 app.post('/api/debug/seed', async (req, res) => {
@@ -117,6 +119,7 @@ app.post('/api/debug/seed', async (req, res) => {
                 price: 0.15,
                 supplier: 'Medline Industries',
                 status: 'Active',
+                expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Healthy: expires in 1 year
                 pharmacyId: pharmacyNorth._id
             },
             {
@@ -127,6 +130,7 @@ app.post('/api/debug/seed', async (req, res) => {
                 price: 0.22,
                 supplier: 'McKesson Corp',
                 status: 'Active',
+                expiryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // Expired: expired 5 days ago
                 pharmacyId: pharmacyNorth._id
             },
             {
@@ -137,6 +141,7 @@ app.post('/api/debug/seed', async (req, res) => {
                 price: 0.08,
                 supplier: 'Medline Industries',
                 status: 'Active',
+                expiryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // Near Expiry: expires in 10 days
                 pharmacyId: pharmacyDowntown._id
             },
             {
@@ -147,6 +152,7 @@ app.post('/api/debug/seed', async (req, res) => {
                 price: 0.12,
                 supplier: 'Cardinal Health',
                 status: 'Inactive',
+                expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), // Healthy: expires in 6 months
                 pharmacyId: pharmacyDowntown._id
             },
             {
@@ -157,6 +163,7 @@ app.post('/api/debug/seed', async (req, res) => {
                 price: 32.50,
                 supplier: 'Cardinal Health',
                 status: 'Active',
+                expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // Near Expiry / Low stock
                 pharmacyId: pharmacyDowntown._id
             }
         ]);

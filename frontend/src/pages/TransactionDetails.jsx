@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
+const TYPE_CONFIG = {
+    'Stock In':   { icon: 'add_circle',            color: '#34d399', bg: 'rgba(52,211,153,0.1)',   border: 'rgba(52,211,153,0.25)'  },
+    'Stock Out':  { icon: 'remove_circle',          color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.25)'  },
+    'Adjustment': { icon: 'published_with_changes', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' },
+    'Expired':    { icon: 'event_busy',             color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.25)'  },
+    'Archived':   { icon: 'archive',                color: '#6b7280', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.2)'  },
+};
+
 export default function TransactionDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -9,195 +17,169 @@ export default function TransactionDetails() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchTxDetails = async () => {
-            setLoading(true);
-            setError(null);
+        const load = async () => {
+            setLoading(true); setError(null);
             try {
                 const res = await fetch(`/api/inventory/history?id=${id}`);
-                if (!res.ok) {
-                    if (res.status === 401) {
-                        navigate('/login');
-                        return;
-                    }
-                    throw new Error('Failed to load transaction details.');
-                }
+                if (!res.ok) { if (res.status === 401) navigate('/login'); throw new Error('Failed to load receipt.'); }
                 const data = await res.json();
-                if (data.length === 0) {
-                    throw new Error('Transaction record not found.');
-                }
-                setTx(data[0]); // Returns as an array filtered by _id
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
+                if (!data.length) throw new Error('Transaction not found.');
+                setTx(data[0]);
+            } catch (err) { setError(err.message); }
+            finally { setLoading(false); }
         };
-
-        fetchTxDetails();
+        load();
     }, [id, navigate]);
 
-    const getTypeStyles = (type) => {
-        switch (type) {
-            case 'Stock In': return 'text-teal-600 bg-teal-50 border-teal-100/50';
-            case 'Stock Out': return 'text-sky-600 bg-sky-50 border-sky-100/50';
-            case 'Adjustment': return 'text-purple-600 bg-purple-50 border-purple-100/50';
-            case 'Expired': return 'text-amber-600 bg-amber-50 border-amber-100/50';
-            case 'Archived':
-            default:
-                return 'text-slate-400 bg-slate-100 border-slate-200/50';
-        }
-    };
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center py-40 gap-3" style={{ color: 'var(--text-muted)' }}>
+            <span className="material-symbols-rounded animate-spin text-3xl" style={{ color: '#00c2cc' }}>sync</span>
+            <span className="text-base">Loading receipt…</span>
+        </div>
+    );
 
-    const getTypeIcon = (type) => {
-        switch (type) {
-            case 'Stock In': return 'add_circle';
-            case 'Stock Out': return 'remove_circle';
-            case 'Adjustment': return 'published_with_changes';
-            case 'Expired': return 'report';
-            case 'Archived':
-            default:
-                return 'archive';
-        }
-    };
+    if (error) return (
+        <div className="flex flex-col items-center justify-center py-40 gap-4">
+            <span className="material-symbols-rounded text-5xl" style={{ color: '#f87171' }}>error</span>
+            <span className="text-base" style={{ color: '#fca5a5' }}>{error}</span>
+            <button onClick={() => navigate('/inventory/history')} className="px-5 py-2.5 rounded-xl text-sm font-bold cursor-pointer"
+                style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171' }}>
+                Back to History
+            </button>
+        </div>
+    );
 
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center p-20 text-slate-400 font-medium gap-3">
-                <span className="material-symbols-rounded animate-spin text-2xl text-teal-500">sync</span>
-                <span className="text-xs">Loading transaction receipt...</span>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center p-20 text-red-500 font-medium gap-3 max-w-md mx-auto">
-                <span className="material-symbols-rounded text-2xl text-red-400">error</span>
-                <span className="text-xs text-center">{error}</span>
-                <button onClick={() => navigate('/inventory/history')} className="mt-4 px-4 py-2 bg-slate-150 text-slate-600 border border-slate-250 rounded-xl text-xs hover:bg-slate-200 cursor-pointer">
-                    Back to History
-                </button>
-            </div>
-        );
-    }
+    const cfg = TYPE_CONFIG[tx.transactionType] || TYPE_CONFIG.Archived;
+    const qty = tx.quantityChanged;
+    const qtyColor = qty > 0 ? '#34d399' : qty < 0 ? '#f87171' : 'var(--text-muted)';
 
     return (
-        <div className="max-w-xl mx-auto flex flex-col gap-8">
+        <div className="max-w-lg mx-auto flex flex-col gap-7 animate-fade-in">
             {/* Header */}
             <div className="flex justify-between items-center">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                        <span className="hover:text-slate-600 cursor-pointer" onClick={() => navigate('/inventory/history')}>Movements Log</span>
+                <div>
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                        <button onClick={() => navigate('/inventory/history')} className="hover:text-[#00c2cc] transition-colors cursor-pointer">Movements</button>
                         <span className="material-symbols-rounded text-sm">chevron_right</span>
-                        <span className="text-slate-600">Transaction Details</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>Receipt</span>
                     </div>
-                    <h2 className="text-xl font-bold text-slate-800 font-title mt-1">Transaction Receipt</h2>
+                    <h2 className="text-3xl font-bold mt-1" style={{ color: 'var(--text-primary)', fontFamily: "'Lora', serif", letterSpacing: '-0.01em' }}>
+                        Transaction Receipt
+                    </h2>
                 </div>
-                <button 
-                    onClick={() => navigate('/inventory/history')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer shadow-sm shadow-slate-100"
-                >
-                    <span className="material-symbols-rounded text-sm">arrow_back</span>
-                    <span>Back</span>
+                <button onClick={() => navigate('/inventory/history')}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-200"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-secondary)' }}>
+                    <span className="material-symbols-rounded text-base">arrow_back</span> Back
                 </button>
             </div>
 
-            {/* Receipt Card */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 flex flex-col gap-6 shadow-sm relative overflow-hidden">
-                {/* Decorative border */}
-                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-teal-500 via-teal-600 to-sky-500"></div>
+            {/* Receipt card */}
+            <div className="rounded-2xl overflow-hidden"
+                style={{ background: 'rgba(15,20,32,0.95)', border: `1px solid ${cfg.border}`, boxShadow: `0 0 48px ${cfg.color}08` }}>
+                {/* Type accent bar */}
+                <div className="h-1" style={{ background: `linear-gradient(90deg, ${cfg.color}, ${cfg.color}50, transparent)` }} />
 
-                {/* Primary Tx Info */}
-                <div className="flex justify-between items-start border-b border-slate-100 pb-5 mt-2">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Transaction ID</span>
-                        <span className="text-xs font-mono font-bold text-slate-700 mt-1">{tx._id}</span>
-                        <span className="text-[10px] text-slate-400 mt-1">{new Date(tx.createdAt).toLocaleString()}</span>
+                <div className="p-7 flex flex-col gap-6">
+                    {/* ID + Type */}
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Transaction ID</p>
+                            <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-secondary)' }}>{tx._id}</p>
+                            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{new Date(tx.createdAt).toLocaleString()}</p>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold"
+                            style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}>
+                            <span className="material-symbols-rounded text-base" style={{ fontVariationSettings: "'FILL' 1" }}>{cfg.icon}</span>
+                            {tx.transactionType}
+                        </span>
                     </div>
+
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+
+                    {/* Medicine */}
                     <div>
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold border ${getTypeStyles(tx.transactionType)} shadow-sm`}>
-                            <span className="material-symbols-rounded text-xs">{getTypeIcon(tx.transactionType)}</span>
-                            <span>{tx.transactionType}</span>
-                        </span>
-                    </div>
-                </div>
-
-                {/* Medication summary */}
-                <div className="flex flex-col gap-1 border-b border-slate-100 pb-5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Medication Details</span>
-                    {tx.medicineId ? (
-                        <div className="flex flex-col gap-1 mt-1.5">
-                            <span 
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Medication</p>
+                        {tx.medicineId ? (
+                            <div className="flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all duration-200"
+                                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
                                 onClick={() => navigate(`/medicines/${tx.medicineId._id}`)}
-                                className="font-bold text-slate-800 text-sm hover:text-teal-600 cursor-pointer hover:underline transition-all"
-                            >
-                                {tx.medicineId.name}
-                            </span>
-                            <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
-                                <span className="font-mono text-[10px]">NDC: {tx.medicineId.ndc}</span>
-                                <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-500 font-bold uppercase tracking-wide">
-                                    {tx.medicineId.category}
-                                </span>
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,194,204,0.3)'; e.currentTarget.style.background = 'rgba(0,194,204,0.04)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}>
+                                <span className="material-symbols-rounded text-2xl" style={{ color: '#00c2cc', fontVariationSettings: "'FILL' 1" }}>medication</span>
+                                <div className="flex flex-col">
+                                    <span className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>{tx.medicineId.name}</span>
+                                    <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>NDC: {tx.medicineId.ndc}</span>
+                                </div>
+                                <span className="material-symbols-rounded ml-auto" style={{ color: 'var(--text-muted)' }}>chevron_right</span>
+                            </div>
+                        ) : (
+                            <span className="text-sm italic" style={{ color: 'var(--text-muted)' }}>Medicine record deleted</span>
+                        )}
+                    </div>
+
+                    {/* Qty + User */}
+                    <div className="grid grid-cols-2 gap-4 p-4 rounded-xl"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Quantity</p>
+                            <p className="text-3xl font-bold mt-1" style={{ color: qtyColor, fontFamily: "'Lora', serif" }}>
+                                {qty > 0 ? `+${qty.toLocaleString()}` : qty.toLocaleString()}
+                            </p>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>units</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Authorized By</p>
+                            <div className="flex items-center gap-2 mt-2">
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
+                                    style={{ background: 'rgba(0,194,204,0.15)', color: '#00c2cc', border: '1px solid rgba(0,194,204,0.25)' }}>
+                                    {(tx.userId?.username || 'S').charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{tx.userId?.username || 'System'}</span>
                             </div>
                         </div>
-                    ) : (
-                        <span className="text-slate-400 italic text-xs mt-1.5">Medication record deleted from catalog</span>
+                    </div>
+
+                    {/* Stock In batch */}
+                    {tx.transactionType === 'Stock In' && (
+                        <>
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>Batch Tracking</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[['Batch / Lot', tx.batchNumber, true], ['Supplier', tx.supplier, false], ['Date Received', tx.receivedDate ? new Date(tx.receivedDate).toLocaleDateString() : new Date(tx.createdAt).toLocaleDateString(), false]].map(([label, val, mono]) => (
+                                        <div key={label}>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>{label}</p>
+                                            <p className={`text-sm font-medium mt-0.5 ${mono ? 'font-mono' : ''}`} style={{ color: 'var(--text-primary)' }}>{val || '—'}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
                     )}
-                </div>
 
-                {/* Adjustment Quantity info */}
-                <div className="bg-slate-50 border border-slate-150 p-4 rounded-xl shadow-inner grid grid-cols-2 gap-4 text-xs">
-                    <div className="flex flex-col gap-0.5">
-                        <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Adjustment Qty</span>
-                        <span className={`text-base font-extrabold ${tx.quantityChanged > 0 ? 'text-teal-600' : tx.quantityChanged < 0 ? 'text-red-500' : 'text-slate-500'}`}>
-                            {tx.quantityChanged > 0 ? `+${tx.quantityChanged.toLocaleString()}` : tx.quantityChanged.toLocaleString()} units
-                        </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                        <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Authorized Clerk</span>
-                        <span className="text-sm font-bold text-slate-700 mt-0.5">{tx.userId?.username || 'Seed'}</span>
-                    </div>
-                </div>
-
-                {/* Batch details / Supplier details if Stock In */}
-                {tx.transactionType === 'Stock In' && (
-                    <div className="flex flex-col gap-4 border-b border-slate-100 pb-5">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Batch Tracking Metadata</span>
-                        <div className="grid grid-cols-2 gap-4 text-xs">
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold text-[9px] uppercase tracking-wider">Batch Number</span>
-                                <span className="font-mono text-slate-700 font-bold">{tx.batchNumber || 'N/A'}</span>
+                    {/* Reason */}
+                    {tx.reason && (
+                        <>
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Reason</p>
+                                <p className="text-sm font-medium px-4 py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--text-secondary)' }}>
+                                    {tx.reason}
+                                </p>
                             </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold text-[9px] uppercase tracking-wider">Supplier</span>
-                                <span className="text-slate-700 font-semibold">{tx.supplier || 'N/A'}</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-slate-400 font-bold text-[9px] uppercase tracking-wider">Date Received</span>
-                                <span className="text-slate-600">
-                                    {tx.receivedDate ? new Date(tx.receivedDate).toLocaleDateString() : new Date(tx.createdAt).toLocaleDateString()}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                        </>
+                    )}
 
-                {/* Reason Details if Stock Out / Adjustment */}
-                {tx.transactionType !== 'Stock In' && tx.reason && (
-                    <div className="flex flex-col gap-2 border-b border-slate-100 pb-5">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Adjustment Reason</span>
-                        <div className="bg-slate-50 border border-slate-150 p-3 rounded-lg text-xs font-semibold text-slate-700">
-                            {tx.reason}
-                        </div>
+                    {/* Notes */}
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>Audit Notes</p>
+                        <p className="text-sm italic leading-relaxed px-4 py-3 rounded-xl"
+                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--text-muted)', fontFamily: "'Lora', serif" }}>
+                            "{tx.notes || 'No audit remarks recorded.'}"
+                        </p>
                     </div>
-                )}
-
-                {/* Audit notes */}
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Audit notes</span>
-                    <p className="text-xs text-slate-500 leading-relaxed italic bg-slate-50 border border-slate-150 p-3.5 rounded-xl">
-                        "{tx.notes || 'No remarks recorded.'}"
-                    </p>
                 </div>
             </div>
         </div>

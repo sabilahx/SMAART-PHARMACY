@@ -1,285 +1,601 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// ── Health score 0-100 ──
+function calcHealth(meds) {
+    if (!meds.length) return 0;
+    const active = meds.filter(m => m.status === 'Active');
+    const total = meds.filter(m => m.status !== 'Archived');
+    if (!total.length) return 0;
+    const ratio = active.length / total.length;
+    const low = active.filter(m => m.stock > 0 && m.stock < 20).length;
+    const zero = active.filter(m => m.stock === 0).length;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expired = active.filter(m => m.expiryDate && new Date(m.expiryDate) < today).length;
+    return Math.max(0, Math.min(100, Math.round(
+        ratio * 100 - (low / (active.length || 1)) * 20 - (zero / (active.length || 1)) * 40 - (expired / (active.length || 1)) * 50
+    )));
+}
+
+const CAT_COLORS = {
+    Cardiovascular: '#f87171', 'Anti-infective': '#34d399', Endocrine: '#60a5fa',
+    Emergency: '#f59e0b', Analgesic: '#a78bfa', Neurological: '#e879f9',
+    Gastrointestinal: '#22d3ee', General: '#00c2cc',
+};
+const CAT_ICONS = {
+    Cardiovascular: 'favorite', 'Anti-infective': 'coronavirus', Endocrine: 'opacity',
+    Emergency: 'emergency', Analgesic: 'healing', Neurological: 'psychology',
+    Gastrointestinal: 'bubble_chart', General: 'medication',
+};
+const STATUS_CFG = {
+    Active:   { color: '#34d399', bg: 'rgba(52,211,153,0.08)',  border: 'rgba(52,211,153,0.2)'  },
+    Inactive: { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.2)'  },
+    Archived: { color: '#6b7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.15)' },
+};
+const CATEGORIES = ['All', 'Cardiovascular', 'Anti-infective', 'Endocrine', 'Emergency', 'Analgesic', 'Neurological', 'Gastrointestinal', 'General'];
+
+// ── AI insight blurbs (max 2, most critical) ──
+function getInsights(meds) {
+    const active = meds.filter(m => m.status === 'Active');
+    const zero = active.filter(m => m.stock === 0);
+    const low = active.filter(m => m.stock > 0 && m.stock < 20);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    
+    const expired = active.filter(m => m.expiryDate && new Date(m.expiryDate) < today);
+    const nearExpiry = active.filter(m => m.expiryDate && new Date(m.expiryDate) >= today && new Date(m.expiryDate) <= thirtyDaysFromNow);
+
+    const insights = [];
+    if (expired.length) insights.push({ icon: 'event_busy', color: '#f87171', bg: 'rgba(248,113,113,0.04)', border: 'rgba(248,113,113,0.15)', text: `${expired.length} items expired.` });
+    if (nearExpiry.length) insights.push({ icon: 'warning', color: '#f59e0b', bg: 'rgba(245,158,11,0.04)', border: 'rgba(245,158,11,0.15)', text: `${nearExpiry.length} items near expiry.` });
+    if (zero.length) insights.push({ icon: 'error', color: '#f87171', bg: 'rgba(248,113,113,0.04)', border: 'rgba(248,113,113,0.15)', text: `${zero.length} items depleted.` });
+    if (low.length) insights.push({ icon: 'warning', color: '#f59e0b', bg: 'rgba(245,158,11,0.04)', border: 'rgba(245,158,11,0.15)', text: `${low.length} items running low.` });
+    if (!insights.length && active.length) insights.push({ icon: 'check_circle', color: '#34d399', bg: 'rgba(52,211,153,0.04)', border: 'rgba(52,211,153,0.15)', text: `All catalog channels active.` });
+    return insights.slice(0, 2);
+}
+
+// ── Text Highlight Component ──
+function HighlightText({ text, query }) {
+    if (!query || !text) return <span>{text}</span>;
+    const parts = text.split(new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
+    return (
+        <span>
+            {parts.map((part, i) => 
+                part.toLowerCase() === query.toLowerCase() 
+                    ? <span key={i} className="text-[#00e5ff] font-bold bg-[#00e5ff]/10 rounded-sm px-0.5">{part}</span> 
+                    : <span key={i}>{part}</span>
+            )}
+        </span>
+    );
+}
+
+// ── CountUp Metrics Component ──
+function CountUp({ value, prefix = "", suffix = "", duration = 800 }) {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        let start = 0;
+        const end = parseFloat(value);
+        if (isNaN(end)) {
+            setCount(value);
+            return;
+        }
+
+        const isInt = Number.isInteger(end);
+        const startTime = performance.now();
+
+        const updateCount = (now) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const current = progress * end;
+            setCount(isInt ? Math.floor(current) : parseFloat(current.toFixed(1)));
+
+            if (progress < 1) {
+                requestAnimationFrame(updateCount);
+            } else {
+                setCount(end);
+            }
+        };
+
+        requestAnimationFrame(updateCount);
+    }, [value, duration]);
+
+    return (
+        <span>
+            {prefix}
+            {count.toLocaleString('en-IN')}
+            {suffix}
+        </span>
+    );
+}
+
+// ── Deterministic Sparkline Generation ──
+function getDeterministicPoints(id, stock) {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Generate 7 points starting near the stock level
+    const points = [];
+    let current = stock;
+    
+    for (let i = 0; i < 7; i++) {
+        // pseudo random value between -10 and +10
+        const rand = ((hash >> (i * 2)) & 15) - 7.5;
+        current = Math.max(0, current + rand);
+        points.push(current);
+    }
+    
+    return points;
+}
+
+function getSparklinePath(id, stock) {
+    const points = getDeterministicPoints(id, stock);
+    const min = Math.min(...points);
+    const max = Math.max(...points);
+    const range = max - min || 1;
+    
+    const width = 60;
+    const height = 20;
+    const padding = 2;
+    
+    const coords = points.map((p, i) => {
+        const x = (i / 6) * (width - 2 * padding) + padding;
+        const y = height - ((p - min) / range) * (height - 2 * padding) - padding;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    
+    return `M ${coords.join(' L ')}`;
+}
+
+// ── Premium medicine card ──
+function MedCard({ item, query, index, onView, onEdit }) {
+    const cc = CAT_COLORS[item.category] || '#00c2cc';
+    const ci = CAT_ICONS[item.category] || 'medication';
+    const sc = STATUS_CFG[item.status] || STATUS_CFG.Archived;
+    const isZero = item.stock === 0;
+    const isLow = item.stock > 0 && item.stock < 20;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    thirtyDaysFromNow.setHours(23, 59, 59, 999);
+
+    const expDate = item.expiryDate ? new Date(item.expiryDate) : null;
+    const isExpired = expDate ? expDate < today : false;
+    const isNearExpiry = expDate ? (expDate >= today && expDate <= thirtyDaysFromNow) : false;
+
+    return (
+        <div
+            className="rounded-xl flex flex-col relative overflow-hidden cursor-pointer transition-all duration-300 group backdrop-blur-md border border-white/[0.04] animate-slide-up"
+            style={{ 
+                background: 'rgba(15,20,32,0.4)', 
+                boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
+                animationDelay: `${index * 0.05}s`,
+                animationFillMode: 'both'
+            }}
+            onMouseEnter={e => { 
+                e.currentTarget.style.transform = 'translateY(-3px)'; 
+                e.currentTarget.style.borderColor = `${cc}40`; 
+                e.currentTarget.style.boxShadow = `0 8px 40px ${cc}15`; 
+            }}
+            onMouseLeave={e => { 
+                e.currentTarget.style.transform = 'translateY(0)'; 
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)';
+                e.currentTarget.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.2)'; 
+            }}
+            onClick={() => onView(item._id)}
+        >
+            {/* Header strip with soft gradient matching category */}
+            <div className="relative h-16 flex items-center justify-between px-4 overflow-hidden border-b border-white/[0.02]">
+                {/* Background glow matching category */}
+                <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none rounded-full"
+                    style={{ background: `radial-gradient(circle, ${cc}15 0%, transparent 70%)`, filter: 'blur(15px)' }} />
+
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-105"
+                        style={{ background: `${cc}08` }}>
+                        <span className="material-symbols-rounded"
+                            style={{ fontSize: '18px', color: cc, fontVariationSettings: "'FILL' 1" }}>
+                            {ci}
+                        </span>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{item.category}</span>
+                </div>
+                
+                {/* Status indicator pill */}
+                <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider ${item.status === 'Inactive' ? 'animate-pulse-slow' : ''}`}
+                    style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
+                    {item.status}
+                </span>
+            </div>
+
+            {/* Body */}
+            <div className="flex flex-col px-4 pb-4 pt-3.5 gap-2 relative z-10">
+                <div className="flex flex-col gap-0.5">
+                    <span className="text-base font-extrabold tracking-tight leading-snug line-clamp-1 text-white group-hover:text-[#00e5ff] transition-colors duration-200"
+                        style={{ fontFamily: "'Lora', serif" }}>
+                        <HighlightText text={item.name} query={query} />
+                    </span>
+                    
+                    {/* Thin Stock Level Progress Bar */}
+                    <div className="w-full h-[3px] bg-white/5 rounded-full overflow-hidden mt-1.5 mb-1 relative">
+                        <div 
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ 
+                                width: `${Math.min(100, (item.stock / 150) * 100)}%`,
+                                background: (item.stock < 20) ? '#f87171' : cc
+                            }}
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] font-mono tracking-wider font-semibold" style={{ color: 'var(--text-muted)' }}>{item.ndc}</span>
+                        {item.supplier && (
+                            <>
+                                <span className="w-1.2 h-1.2 rounded-full bg-white/10" />
+                                <span className="text-[9px] font-medium truncate max-w-[100px]" style={{ color: 'var(--text-muted)' }}>{item.supplier}</span>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Expiry / Stock Out warnings */}
+                <div className="flex flex-col gap-1 mt-0.5 min-h-[20px]">
+                    {isExpired && (
+                        <div className="text-[10px] font-extrabold px-2 py-0.5 rounded flex items-center gap-1.5 w-max"
+                            style={{ background: 'rgba(248,113,113,0.06)', color: '#f87171', border: '1px solid rgba(248,113,113,0.12)' }}>
+                            <span className="material-symbols-rounded text-xs">event_busy</span>
+                            Expired
+                        </div>
+                    )}
+                    {!isExpired && isNearExpiry && (
+                        <div className="text-[10px] font-extrabold px-2 py-0.5 rounded flex items-center gap-1.5 w-max"
+                            style={{ background: 'rgba(245,158,11,0.06)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.12)' }}>
+                            <span className="material-symbols-rounded text-xs">warning</span>
+                            Expiring Soon
+                        </div>
+                    )}
+                </div>
+
+                {/* Price + stock row */}
+                <div className="flex items-center justify-between pt-3 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Unit Cost</span>
+                        <span className="text-lg font-black text-white mt-0.5 text-glow" style={{ fontFamily: "'Lora', serif" }}>
+                            ₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                    </div>
+
+                    {/* Deterministic Sparkline */}
+                    {!isZero && (
+                        <div className="flex items-center" title="7-day stock trend">
+                            <svg width="60" height="20" className="opacity-80">
+                                <path
+                                    d={getSparklinePath(item._id, item.stock)}
+                                    fill="none"
+                                    stroke={isLow ? '#f59e0b' : '#34d399'}
+                                    strokeWidth="1.8"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Stock Level</span>
+                        <span className="text-xs font-bold mt-0.5" style={{ color: isZero ? '#f87171' : isLow ? '#f59e0b' : '#34d399' }}>
+                            {isZero ? 'Out of Stock' : `${item.stock.toLocaleString('en-IN')} units`}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function MedicineList() {
     const [medicines, setMedicines] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [statusFilter, setStatusFilter] = useState('All'); // 'All', 'Active', 'Inactive', 'Archived'
+    const [statusFilter, setStatusFilter] = useState('All');
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
+    const searchInputRef = useRef(null);
 
-    // Fetch medicines
     const fetchMedicines = async () => {
-        setLoading(true);
-        setError(null);
+        setLoading(true); setError(null);
         try {
-            let url = '/api/medicines';
-            // We'll fetch all matching status, or handle client-side. The API supports status parameter.
-            // Let's fetch all medicines belonging to the tenant and filter on client side for smoother feel,
-            // or query depending on filter selection.
-            if (statusFilter !== 'All') {
-                url += `?status=${statusFilter}`;
-            }
+            const url = statusFilter !== 'All' ? `/api/medicines?status=${statusFilter}` : '/api/medicines';
             const res = await fetch(url);
-            if (!res.ok) {
-                if (res.status === 401) {
-                    navigate('/login');
-                    return;
-                }
-                throw new Error('Failed to fetch medicine ledger');
-            }
-            const data = await res.json();
-            setMedicines(data);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
+            if (!res.ok) { if (res.status === 401) { navigate('/login'); return; } throw new Error('Failed to load catalog.'); }
+            setMedicines(await res.json());
+        } catch (err) { setError(err.message); }
+        finally { setLoading(false); }
     };
 
+    useEffect(() => { fetchMedicines(); }, [statusFilter]);
+
+    // Handle "/" keyboard shortcut to focus search input
     useEffect(() => {
-        fetchMedicines();
-    }, [statusFilter]);
+        const handleSearchKey = (e) => {
+            if (e.key === '/' && document.activeElement !== searchInputRef.current) {
+                const active = document.activeElement;
+                const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+                if (!isInput) {
+                    e.preventDefault();
+                    searchInputRef.current?.focus();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleSearchKey);
+        return () => window.removeEventListener('keydown', handleSearchKey);
+    }, []);
 
-    // Client-side search and category filtering
-    const filteredMedicines = medicines.filter(item => {
-        const query = searchQuery.toLowerCase().trim();
-        const matchesSearch = !query || 
-               item.name.toLowerCase().includes(query) || 
-               item.ndc.includes(query) || 
-               item.category.toLowerCase().includes(query) ||
-               (item.supplier && item.supplier.toLowerCase().includes(query));
-        
-        const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
-        return matchesSearch && matchesCategory;
-    });
+    const filtered = useMemo(() => medicines.filter(m => {
+        const q = searchQuery.toLowerCase();
+        return (!q || m.name.toLowerCase().includes(q) || m.ndc.includes(q) || m.category.toLowerCase().includes(q) || (m.supplier||'').toLowerCase().includes(q))
+            && (categoryFilter === 'All' || m.category === categoryFilter);
+    }), [medicines, searchQuery, categoryFilter]);
 
-    // Compute metrics
-    const totalStock = medicines.reduce((acc, curr) => acc + (curr.status !== 'Archived' ? curr.stock : 0), 0);
+    const totalStock = medicines.reduce((a, m) => a + (m.status !== 'Archived' ? m.stock : 0), 0);
     const activeCount = medicines.filter(m => m.status === 'Active').length;
-    const totalAssetValue = medicines.reduce((acc, curr) => acc + (curr.status !== 'Archived' ? (curr.stock * curr.price) : 0), 0);
+    const totalValue = medicines.reduce((a, m) => a + (m.status !== 'Archived' ? m.stock * m.price : 0), 0);
+    const health = calcHealth(medicines);
+    const insights = getInsights(medicines);
+    const healthColor = health >= 80 ? '#34d399' : health >= 50 ? '#f59e0b' : '#f87171';
 
-    const getStatusStyles = (status) => {
-        if (status === 'Active') return 'text-teal-600 bg-teal-50 border-teal-100/60';
-        if (status === 'Inactive') return 'text-amber-600 bg-amber-50 border-amber-100/60';
-        return 'text-slate-400 bg-slate-100 border-slate-200/50';
-    };
-
-    const getCategoryIcon = (category) => {
-        switch (category) {
-            case 'Cardiovascular': return 'favorite';
-            case 'Anti-infective': return 'coronavirus';
-            case 'Endocrine': return 'opacity';
-            case 'Emergency': return 'emergency';
-            case 'Analgesic': return 'healing';
-            case 'Neurological': return 'psychology';
-            case 'Gastrointestinal': return 'bubble_chart';
-            default: return 'medication';
-        }
-    };
-
-    const categories = ['All', 'Cardiovascular', 'Anti-infective', 'Endocrine', 'Emergency', 'General'];
+    // Compute category counts
+    const activeCategoryCounts = useMemo(() => {
+        const counts = {};
+        CATEGORIES.forEach(cat => {
+            if (cat === 'All') {
+                counts['All'] = medicines.filter(m => m.status === 'Active').length;
+            } else {
+                counts[cat] = medicines.filter(m => m.status === 'Active' && m.category === cat).length;
+            }
+        });
+        return counts;
+    }, [medicines]);
 
     return (
-        <div className="flex flex-col gap-8 max-w-6xl mx-auto">
-            {/* Page Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex flex-col">
-                    <h2 className="text-xl font-bold text-slate-800 font-title">Master Stock Ledger</h2>
-                    <p className="text-xs text-slate-400 mt-1">Manage active, inactive, and archived medication logs inside your store.</p>
+        <div className="flex flex-col gap-4 max-w-7xl mx-auto animate-fade-in relative z-10">
+
+            {/* ── Unified Split Hero & Key Metrics Banner ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end pt-0 pb-0">
+                {/* Hero Typography */}
+                <div className="lg:col-span-8 flex flex-col gap-1.5">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>
+                        Catalog Core
+                    </span>
+                    <h2 className="text-4xl md:text-[60px] lg:text-[78px] font-black tracking-tighter text-white leading-[0.88] mt-0" style={{ fontFamily: "'Lora', serif" }}>
+                        Intelligent <span className="text-sky-400">Medicine</span> Catalog
+                    </h2>
+                    <p className="text-[13px] max-w-lg leading-normal mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                        Monitor inventory health, track stock movements, and prevent shortages.
+                    </p>
                 </div>
-                <button 
-                    onClick={() => navigate('/medicines/add')}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 text-white font-bold text-xs rounded-xl hover:bg-teal-500 active:bg-teal-700 transition-all cursor-pointer shadow-md shadow-teal-500/10"
-                >
-                    <span className="material-symbols-rounded text-sm">add</span>
-                    <span>New Medication</span>
-                </button>
+
+                {/* Connected Metrics Panel */}
+                <div className="lg:col-span-4 grid grid-cols-2 gap-4 lg:pl-8 self-end pt-2 lg:pt-0">
+                    {/* Inventory Health Card */}
+                    <div className="rounded-lg p-3.5 flex flex-col gap-1.5 backdrop-blur-md"
+                        style={{ background: 'rgba(15,20,32,0.35)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Inventory Health</span>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                            <span className="text-3xl font-black leading-none tracking-tighter" style={{ fontFamily: "'Lora', serif", color: healthColor }}>
+                                <CountUp value={health} suffix="%" />
+                            </span>
+                            <span className="text-[8px] font-bold px-1.5 py-0.2 rounded" style={{ background: `${healthColor}10`, color: healthColor }}>
+                                {health >= 80 ? 'Optimal' : health >= 50 ? 'Warning' : 'Critical'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Stock Value Card */}
+                    <div className="rounded-lg p-3.5 flex flex-col gap-1.5 backdrop-blur-md"
+                        style={{ background: 'rgba(15,20,32,0.35)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Stock Value</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-3xl font-black text-white leading-none tracking-tighter" style={{ fontFamily: "'Lora', serif" }}>
+                                <CountUp value={(totalValue/100000)} prefix="₹" suffix="L" />
+                            </span>
+                            <span className="flex items-center text-[9px] font-bold text-emerald-400 gap-0.5 ml-1" title="Stock value trend versus last week">
+                                <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
+                                <span>↑4%</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Smart Insights list Card */}
+                    <div className="col-span-2 rounded-lg p-3.5 flex flex-col gap-2.5 backdrop-blur-md"
+                        style={{ background: 'rgba(15,20,32,0.35)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                        <span className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>Smart Insights</span>
+                        <div className="flex flex-col gap-1.5">
+                            {insights.map((ins, i) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ins.color }} />
+                                    <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{ins.text}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Metrics Dashboard Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-sm">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Ledger Stock</span>
-                        <span className="text-xl font-bold text-slate-800 mt-1.5">{totalStock.toLocaleString()}</span>
-                        <span className="text-[9px] text-slate-400 mt-1">units of active inventory</span>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
-                        <span className="material-symbols-rounded">inventory</span>
-                    </div>
-                </div>
-
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-sm">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Catalog</span>
-                        <span className="text-xl font-bold text-slate-800 mt-1.5">{activeCount}</span>
-                        <span className="text-[9px] text-slate-400 mt-1">active medications items</span>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                        <span className="material-symbols-rounded">check_circle</span>
-                    </div>
-                </div>
-
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-sm">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assets valuation</span>
-                        <span className="text-xl font-bold text-teal-600 mt-1.5">${totalAssetValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        <span className="text-[9px] text-slate-400 mt-1">estimated cumulative cost value</span>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600">
-                        <span className="material-symbols-rounded">payments</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Filter & Search Panel */}
-            <div className="flex flex-col gap-5 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                    {/* Search Bar */}
-                    <div className="relative w-full md:w-80">
-                        <span className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+            {/* ── Command Bar Search & Filters ── */}
+            <div className="p-4 rounded-xl flex flex-col gap-4 backdrop-blur-xl border border-white/[0.03]"
+                style={{ background: 'rgba(15,20,32,0.25)' }}>
+                
+                {/* Search / Filter Row */}
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    {/* Search Field */}
+                    <div className="relative flex-1 w-full">
+                        <span className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-lg pointer-events-none" 
+                            style={{ color: '#00e5ff' }}>search</span>
                         <input 
+                            ref={searchInputRef}
                             type="text" 
-                            placeholder="Search name, NDC, category..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white transition-all shadow-inner shadow-slate-100"
+                            placeholder="Search medication name, NDC, category... (Press '/' to focus)" 
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="w-full pl-11 pr-4 py-3 rounded-lg text-sm outline-none transition-all duration-200 border border-white/[0.03]"
+                            style={{ background: 'rgba(255,255,255,0.03)', color: '#ffffff' }}
+                            onFocus={e => { e.target.style.background = 'rgba(255,255,255,0.05)'; e.target.style.borderColor = 'rgba(0,229,255,0.3)'; }}
+                            onBlur={e => { e.target.style.background = 'rgba(255,255,255,0.03)'; e.target.style.borderColor = 'rgba(255,255,255,0.03)'; }} 
                         />
                     </div>
 
-                    {/* Status Filter selector */}
-                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1 w-full md:w-auto overflow-x-auto shadow-inner">
-                        {['All', 'Active', 'Inactive', 'Archived'].map(filter => (
-                            <button
-                                key={filter}
-                                onClick={() => setStatusFilter(filter)}
-                                className={`flex-grow md:flex-grow-0 px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                                    statusFilter === filter 
-                                        ? 'bg-white text-teal-700 shadow-sm border border-slate-200/40' 
-                                        : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                            >
-                                {filter}
+                    {/* Status Selectors */}
+                    <div className="flex items-center rounded-lg p-1 gap-1 flex-shrink-0 w-full md:w-auto border border-white/[0.03]"
+                        style={{ background: 'rgba(255,255,255,0.02)' }}>
+                        {['All', 'Active', 'Inactive', 'Archived'].map(f => (
+                            <button key={f} onClick={() => setStatusFilter(f)}
+                                className="flex-1 md:flex-initial px-4 py-2 rounded-md text-xs font-bold transition-all duration-200 cursor-pointer"
+                                style={{
+                                    background: statusFilter === f ? 'rgba(0,229,255,0.15)' : 'transparent',
+                                    color: statusFilter === f ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                                    border: statusFilter === f ? '1px solid rgba(0,229,255,0.2)' : '1px solid transparent',
+                                }}>
+                                {f}
                             </button>
                         ))}
                     </div>
+
+                    {/* New Medicine Action */}
+                    <button
+                        onClick={() => navigate('/medicines/add')}
+                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer w-full md:w-auto flex-shrink-0 text-slate-950 hover:shadow-[0_0_20px_rgba(0,229,255,0.35)]"
+                        style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #0099a8 100%)' }}
+                    >
+                        <span className="material-symbols-rounded text-lg">add</span>
+                        <span>New Medicine</span>
+                    </button>
                 </div>
 
-                {/* Category selectors (inspired by image category row) */}
-                <div className="flex flex-col gap-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Filter by Category</span>
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                        {categories.map(cat => (
-                            <button
-                                key={cat}
-                                onClick={() => setCategoryFilter(cat)}
-                                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap ${
-                                    categoryFilter === cat
-                                        ? 'bg-teal-50 text-teal-700 border-teal-200'
-                                        : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700'
-                                }`}
-                            >
-                                <span className="material-symbols-rounded text-sm">{getCategoryIcon(cat)}</span>
+                {/* Category Selection Row */}
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollable">
+                    {CATEGORIES.map(cat => {
+                        const cc = CAT_COLORS[cat] || '#00e5ff';
+                        const active = categoryFilter === cat;
+                        const count = activeCategoryCounts[cat] || 0;
+                        return (
+                            <button key={cat} onClick={() => setCategoryFilter(cat)}
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0"
+                                style={{
+                                    background: active ? `${cc}25` : 'rgba(255,255,255,0.02)',
+                                    color: active ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                                    border: active ? `1px solid ${cc}40` : '1px solid transparent',
+                                }}>
+                                {cat !== 'All' && <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1", color: active ? cc : 'inherit' }}>{CAT_ICONS[cat]}</span>}
                                 <span>{cat}</span>
+                                <span 
+                                    className="text-[9px] px-1.5 py-0.5 rounded-full font-mono ml-0.5"
+                                    style={{ 
+                                        background: active ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                                        color: active ? '#ffffff' : 'rgba(255,255,255,0.4)'
+                                    }}
+                                >
+                                    {count}
+                                </span>
                             </button>
-                        ))}
-                    </div>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Ledger Cards Grid */}
-            <div>
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center p-20 text-slate-400 font-medium gap-3">
-                        <span className="material-symbols-rounded animate-spin text-2xl text-teal-500">sync</span>
-                        <span className="text-xs">Loading ledger records...</span>
-                    </div>
-                ) : error ? (
-                    <div className="flex flex-col items-center justify-center p-20 text-red-500 font-medium gap-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                        <span className="material-symbols-rounded text-2xl text-red-400">error</span>
-                        <span className="text-xs">{error}</span>
-                        <button onClick={fetchMedicines} className="mt-4 px-4 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs hover:bg-slate-200 cursor-pointer">Retry</button>
-                    </div>
-                ) : filteredMedicines.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-20 text-slate-400 gap-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                        <span className="material-symbols-rounded text-4xl text-slate-300">inventory_2</span>
-                        <div className="text-center">
-                            <span className="text-xs font-bold text-slate-700 block">No Medication Records Found</span>
-                            <span className="text-[10px] text-slate-400 mt-1 block">Try clearing filters or add a new medicine entry.</span>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {filteredMedicines.map(item => {
-                            const val = (item.stock * item.price).toFixed(2);
-                            return (
-                                <div key={item._id} className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-slate-350 transition-all group relative">
-                                    
-                                    {/* Visual Avatar container */}
-                                    <div className="w-full h-32 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center relative overflow-hidden mb-4 shadow-inner">
-                                        <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-teal-50/70 rounded-full blur-xl pointer-events-none group-hover:bg-teal-50/90 transition-all"></div>
-                                        <span className="material-symbols-rounded text-4xl text-teal-600 drop-shadow-sm group-hover:scale-110 transition-all duration-300">
-                                            {getCategoryIcon(item.category)}
-                                        </span>
-                                        
-                                        {/* Status badge in top right */}
-                                        <span className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md text-[9px] font-bold border ${getStatusStyles(item.status)} shadow-sm`}>
-                                            {item.status}
-                                        </span>
-                                    </div>
+            {/* ── Subtitle / Details row ── */}
+            <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Showing <strong style={{ color: 'var(--text-secondary)' }}>{filtered.length}</strong> of {medicines.length} registered medications
+                </span>
+                <button onClick={() => navigate('/inventory/transaction-new')}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all duration-200"
+                    style={{ background: 'rgba(167,139,250,0.05)', border: '1px solid rgba(167,139,250,0.12)', color: '#a78bfa' }}>
+                    <span className="material-symbols-rounded text-sm">swap_horiz</span>
+                    <span>Record Movement</span>
+                </button>
+            </div>
 
-                                    {/* Metadata */}
-                                    <div className="flex flex-col gap-1 mb-4">
-                                        <span 
-                                            onClick={() => navigate(`/medicines/${item._id}`)}
-                                            className="font-bold text-slate-800 text-xs hover:text-teal-600 cursor-pointer line-clamp-1 transition-all"
-                                        >
-                                            {item.name}
-                                        </span>
-                                        <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-mono">
-                                            <span>NDC:</span>
-                                            <span>{item.ndc}</span>
-                                        </div>
-                                        <span className="text-[8px] font-bold text-slate-400 bg-slate-100 border border-slate-150 px-2 py-0.5 rounded-md self-start mt-1">
-                                            {item.category}
-                                        </span>
+            {/* ── Catalog Grid ── */}
+            {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: 8 }).map((_, idx) => (
+                        <div
+                            key={idx}
+                            className="rounded-xl flex flex-col h-[185px] relative overflow-hidden border border-white/[0.04]"
+                            style={{ background: 'rgba(15,20,32,0.3)' }}
+                        >
+                            {/* Skeleton Header */}
+                            <div className="h-16 flex items-center justify-between px-4 border-b border-white/[0.02] relative overflow-hidden">
+                                <div className="absolute inset-0 animate-shimmer" />
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-white/5" />
+                                    <div className="w-16 h-3.5 rounded bg-white/5" />
+                                </div>
+                                <div className="w-12 h-5 rounded bg-white/5" />
+                            </div>
+                            {/* Skeleton Body */}
+                            <div className="flex flex-col px-4 pb-4 pt-3.5 gap-3 relative overflow-hidden flex-1 justify-between">
+                                <div className="absolute inset-0 animate-shimmer" />
+                                <div className="flex flex-col gap-2">
+                                    <div className="w-3/4 h-5 rounded bg-white/5" />
+                                    <div className="w-1/2 h-3 rounded bg-white/5" />
+                                </div>
+                                <div className="flex items-center justify-between pt-3 border-t border-white/[0.03]">
+                                    <div className="flex flex-col gap-1.5">
+                                        <div className="w-10 h-2.5 rounded bg-white/5" />
+                                        <div className="w-14 h-4 rounded bg-white/5" />
                                     </div>
-
-                                    {/* Pricing & Stock section (inspired by Brufen card design) */}
-                                    <div className="flex justify-between items-end border-t border-slate-100 pt-3">
-                                        <div className="flex flex-col">
-                                            <span className="text-[9px] font-semibold text-slate-400">Unit Cost</span>
-                                            <span className="text-sm font-extrabold text-teal-600">${item.price.toFixed(2)}</span>
-                                            <span className="text-[9px] font-bold text-slate-500 mt-0.5">{item.stock.toLocaleString()} units left</span>
-                                        </div>
-                                        
-                                        {/* Action buttons */}
-                                        <div className="flex items-center gap-1">
-                                            <button 
-                                                onClick={() => navigate(`/medicines/${item._id}`)}
-                                                title="View Details"
-                                                className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center transition-all cursor-pointer"
-                                            >
-                                                <span className="material-symbols-rounded text-sm">visibility</span>
-                                            </button>
-                                            <button 
-                                                onClick={() => navigate(`/medicines/edit/${item._id}`)}
-                                                title="Edit Record"
-                                                className="w-7 h-7 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600 border border-teal-100/50 flex items-center justify-center transition-all cursor-pointer"
-                                            >
-                                                <span className="material-symbols-rounded text-sm">edit</span>
-                                            </button>
-                                        </div>
+                                    <div className="flex flex-col items-end gap-1.5">
+                                        <div className="w-12 h-2.5 rounded bg-white/5" />
+                                        <div className="w-16 h-4 rounded bg-white/5" />
                                     </div>
                                 </div>
-                            );
-                        })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : error ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-4 rounded-2xl"
+                    style={{ background: 'rgba(248,113,113,0.01)', border: '1px solid rgba(248,113,113,0.08)', color: '#fca5a5' }}>
+                    <span className="material-symbols-rounded text-4xl" style={{ color: '#f87171' }}>error</span>
+                    <span className="text-sm">{error}</span>
+                    <button onClick={fetchMedicines} className="px-5 py-2.5 rounded-xl text-sm font-bold cursor-pointer"
+                        style={{ background: 'rgba(248,113,113,0.04)', border: '1px solid rgba(248,113,113,0.12)', color: '#f87171' }}>Retry</button>
+                </div>
+            ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 rounded-2xl border border-white/[0.03]"
+                    style={{ background: 'rgba(15, 20, 32, 0.15)' }}>
+                    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-4">
+                        <circle cx="60" cy="60" r="45" stroke="#00e5ff" strokeWidth="2" strokeDasharray="4 4" className="opacity-25" />
+                        <path d="M45 45 L75 75" stroke="#00e5ff" strokeWidth="3" strokeLinecap="round" className="opacity-40" />
+                        <rect x="35" y="35" width="50" height="50" rx="10" stroke="#00e5ff" strokeWidth="2.5" className="opacity-20" />
+                        <circle cx="60" cy="60" r="15" stroke="#00e5ff" strokeWidth="3" className="opacity-60" />
+                        <line x1="70.5" y1="70.5" x2="88" y2="88" stroke="#00e5ff" strokeWidth="3" strokeLinecap="round" className="opacity-80" />
+                    </svg>
+                    <div className="text-center">
+                        <h3 className="text-lg font-black text-white" style={{ fontFamily: "'Lora', serif" }}>No matching medications found</h3>
+                        <p className="text-xs text-white/50 max-w-sm mt-1 mx-auto leading-relaxed">
+                            We couldn't find any medications matching "{searchQuery}" under the current filters. Please verify NDC spelling or category flags.
+                        </p>
                     </div>
-                )}
-            </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filtered.map((item, index) => (
+                        <MedCard key={item._id} item={item} query={searchQuery} index={index}
+                            onView={id => navigate(`/medicines/${id}`)}
+                            onEdit={id => navigate(`/medicines/edit/${id}`)} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

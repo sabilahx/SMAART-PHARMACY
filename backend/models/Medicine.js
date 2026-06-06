@@ -36,6 +36,10 @@ const medicineSchema = new mongoose.Schema({
         default: 'Active',
         required: true
     },
+    expiryDate: {
+        type: Date,
+        index: true
+    },
     pharmacyId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Pharmacy',

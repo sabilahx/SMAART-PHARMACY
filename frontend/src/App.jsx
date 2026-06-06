@@ -11,6 +11,8 @@ import MedicineDetails from './pages/MedicineDetails';
 import InventoryHistory from './pages/InventoryHistory';
 import InventoryTransactionForm from './pages/InventoryTransactionForm';
 import TransactionDetails from './pages/TransactionDetails';
+import Dashboard from './pages/Dashboard';
+import ExpiryDashboard from './pages/ExpiryDashboard';
 
 export default function App() {
     return (
@@ -23,6 +25,7 @@ export default function App() {
                     {/* Authenticated Application Shell */}
                     <Route element={<ProtectedRoute />}>
                         <Route element={<Layout />}>
+                            <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/medicines" element={<MedicineList />} />
                             <Route path="/medicines/add" element={<AddMedicine />} />
                             <Route path="/medicines/:id" element={<MedicineDetails />} />
@@ -30,9 +33,10 @@ export default function App() {
                             <Route path="/inventory/history" element={<InventoryHistory />} />
                             <Route path="/inventory/transaction-new" element={<InventoryTransactionForm />} />
                             <Route path="/inventory/transaction/:id" element={<TransactionDetails />} />
+                            <Route path="/expiry-dashboard" element={<ExpiryDashboard />} />
                             
                             {/* Fallback routes redirection */}
-                            <Route path="*" element={<Navigate to="/medicines" replace />} />
+                            <Route path="*" element={<Navigate to="/dashboard" replace />} />
                         </Route>
                     </Route>
                 </Routes>
