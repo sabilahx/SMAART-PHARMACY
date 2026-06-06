@@ -1,4 +1,5 @@
 import Medicine from '../models/Medicine.js';
+import InventoryLog from '../models/InventoryLog.js';
 
 // Get all medicines belonging to the logged-in user's pharmacy
 export const getMedicines = async (req, res) => {
@@ -58,6 +59,22 @@ export const addMedicine = async (req, res) => {
         });
 
         const savedMedicine = await medicine.save();
+
+        // Audit Log entry
+        const log = new InventoryLog({
+            medicineId: savedMedicine._id,
+            pharmacyId: req.user.pharmacyId,
+            userId: req.user.id,
+            changeType: 'Create',
+            quantityChanged: savedMedicine.stock,
+            oldStock: 0,
+            newStock: savedMedicine.stock,
+            newStatus: savedMedicine.status,
+            newPrice: savedMedicine.price,
+            notes: 'Medication record created'
+        });
+        await log.save();
+
         res.status(201).json(savedMedicine);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -77,6 +94,11 @@ export const updateMedicine = async (req, res) => {
             return res.status(404).json({ message: 'Medicine not found or access denied' });
         }
 
+        // Cache old values for change auditing
+        const oldStock = medicine.stock;
+        const oldPrice = medicine.price;
+        const oldStatus = medicine.status;
+
         if (name !== undefined) medicine.name = name;
         if (ndc !== undefined) medicine.ndc = ndc;
         if (category !== undefined) medicine.category = category;
@@ -94,7 +116,52 @@ export const updateMedicine = async (req, res) => {
         medicine.updatedBy = req.user.id;
 
         const updatedMedicine = await medicine.save();
+
+        // Audit Log entry
+        const quantityChanged = (stock !== undefined) ? (stock - oldStock) : 0;
+        
+        let changeType = 'InfoUpdate';
+        if (quantityChanged !== 0) {
+            changeType = 'StockUpdate';
+        } else if (status !== undefined && status !== oldStatus) {
+            changeType = 'StatusChange';
+        } else if (price !== undefined && price !== oldPrice) {
+            changeType = 'PriceUpdate';
+        }
+
+        const log = new InventoryLog({
+            medicineId: medicine._id,
+            pharmacyId: req.user.pharmacyId,
+            userId: req.user.id,
+            changeType,
+            quantityChanged,
+            oldStock,
+            newStock: medicine.stock,
+            oldPrice,
+            newPrice: medicine.price,
+            oldStatus,
+            newStatus: medicine.status,
+            notes: `Medication updated by ${req.user.username}`
+        });
+        await log.save();
+
         res.json(updatedMedicine);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Retrieve audit logs for a single medicine record with tenant verification
+export const getMedicineLogs = async (req, res) => {
+    try {
+        const logs = await InventoryLog.find({
+            medicineId: req.params.id,
+            pharmacyId: req.user.pharmacyId
+        })
+        .populate('userId', 'username')
+        .sort({ createdAt: -1 });
+        
+        res.json(logs);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

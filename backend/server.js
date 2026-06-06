@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import { protect } from './middleware/authMiddleware.js';
 import { login, logout, getMe } from './controllers/authController.js';
-import { getMedicines, getMedicineById, addMedicine, updateMedicine } from './controllers/medicineController.js';
+import { getMedicines, getMedicineById, addMedicine, updateMedicine, getMedicineLogs } from './controllers/medicineController.js';
 
 // Load models for seeder
 import Pharmacy from './models/Pharmacy.js';
@@ -58,6 +58,7 @@ app.get('/api/medicines', protect, getMedicines);
 app.get('/api/medicines/:id', protect, getMedicineById);
 app.post('/api/medicines', protect, addMedicine);
 app.put('/api/medicines/:id', protect, updateMedicine);
+app.get('/api/medicines/:id/logs', protect, getMedicineLogs);
 
 // Debug Seeder Route (for Phase 1 Manual Verification)
 app.post('/api/debug/seed', async (req, res) => {

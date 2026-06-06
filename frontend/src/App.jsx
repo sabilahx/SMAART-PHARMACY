@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import MedicineList from './pages/MedicineList';
 import AddMedicine from './pages/AddMedicine';
 import EditMedicine from './pages/EditMedicine';
+import MedicineDetails from './pages/MedicineDetails';
 
 export default function App() {
     return (
@@ -21,6 +22,7 @@ export default function App() {
                         <Route element={<Layout />}>
                             <Route path="/medicines" element={<MedicineList />} />
                             <Route path="/medicines/add" element={<AddMedicine />} />
+                            <Route path="/medicines/:id" element={<MedicineDetails />} />
                             <Route path="/medicines/edit/:id" element={<EditMedicine />} />
                             
                             {/* Fallback routes redirection */}

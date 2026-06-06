@@ -147,7 +147,12 @@ export default function MedicineList() {
                                         <tr key={item._id} className="hover:bg-slate-800/10 transition-all">
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-col">
-                                                    <span className="font-semibold text-slate-100">{item.name}</span>
+                                                    <span 
+                                                        onClick={() => navigate(`/medicines/${item._id}`)}
+                                                        className="font-semibold text-slate-100 hover:text-emerald-400 hover:underline cursor-pointer transition-all"
+                                                    >
+                                                        {item.name}
+                                                    </span>
                                                     {item.supplier && <span className="text-[10px] text-slate-500 mt-0.5">{item.supplier}</span>}
                                                 </div>
                                             </td>
@@ -162,13 +167,22 @@ export default function MedicineList() {
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6 text-right">
-                                                <button 
-                                                    onClick={() => navigate(`/medicines/edit/${item._id}`)}
-                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 rounded-lg text-slate-200 hover:text-slate-50 text-[11px] font-medium transition-all cursor-pointer"
-                                                >
-                                                    <span className="material-symbols-rounded text-xs">edit</span>
-                                                    <span>Edit</span>
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button 
+                                                        onClick={() => navigate(`/medicines/${item._id}`)}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-950 hover:bg-slate-800 active:bg-slate-900 border border-slate-800 rounded-lg text-slate-400 hover:text-slate-200 text-[11px] font-medium transition-all cursor-pointer"
+                                                    >
+                                                        <span className="material-symbols-rounded text-xs">visibility</span>
+                                                        <span>View</span>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => navigate(`/medicines/edit/${item._id}`)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 rounded-lg text-slate-200 hover:text-slate-50 text-[11px] font-medium transition-all cursor-pointer"
+                                                    >
+                                                        <span className="material-symbols-rounded text-xs">edit</span>
+                                                        <span>Edit</span>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
