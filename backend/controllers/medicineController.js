@@ -1,0 +1,101 @@
+import Medicine from '../models/Medicine.js';
+
+// Get all medicines belonging to the logged-in user's pharmacy
+export const getMedicines = async (req, res) => {
+    const { status } = req.query;
+    try {
+        const query = { pharmacyId: req.user.pharmacyId };
+        
+        if (status) {
+            query.status = status;
+        } else {
+            // Default to Active and Inactive, hiding Archived records unless requested
+            query.status = { $in: ['Active', 'Inactive'] };
+        }
+
+        const medicines = await Medicine.find(query).sort({ name: 1 });
+        res.json(medicines);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Retrieve a single medicine record with tenant verification
+export const getMedicineById = async (req, res) => {
+    try {
+        const medicine = await Medicine.findOne({
+            _id: req.params.id,
+            pharmacyId: req.user.pharmacyId
+        });
+        
+        if (!medicine) {
+            return res.status(404).json({ message: 'Medicine not found' });
+        }
+        res.json(medicine);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Create a new medicine record
+export const addMedicine = async (req, res) => {
+    const { name, ndc, category, stock, price, supplier } = req.body;
+    try {
+        if (!name || !ndc || price === undefined) {
+            return res.status(400).json({ message: 'Name, NDC, and Price are required' });
+        }
+
+        const medicine = new Medicine({
+            name,
+            ndc,
+            category,
+            stock: stock || 0,
+            price,
+            supplier,
+            status: 'Active',
+            pharmacyId: req.user.pharmacyId, // Always bind to user's pharmacy
+            updatedBy: req.user.id
+        });
+
+        const savedMedicine = await medicine.save();
+        res.status(201).json(savedMedicine);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Update a medicine record (with status update support, preventing hard delete)
+export const updateMedicine = async (req, res) => {
+    const { name, ndc, category, stock, price, supplier, status } = req.body;
+    try {
+        const medicine = await Medicine.findOne({
+            _id: req.params.id,
+            pharmacyId: req.user.pharmacyId
+        });
+
+        if (!medicine) {
+            return res.status(404).json({ message: 'Medicine not found or access denied' });
+        }
+
+        if (name !== undefined) medicine.name = name;
+        if (ndc !== undefined) medicine.ndc = ndc;
+        if (category !== undefined) medicine.category = category;
+        if (stock !== undefined) medicine.stock = stock;
+        if (price !== undefined) medicine.price = price;
+        if (supplier !== undefined) medicine.supplier = supplier;
+        
+        if (status !== undefined) {
+            if (!['Active', 'Inactive', 'Archived'].includes(status)) {
+                return res.status(400).json({ message: 'Invalid status value' });
+            }
+            medicine.status = status;
+        }
+
+        medicine.updatedBy = req.user.id;
+
+        const updatedMedicine = await medicine.save();
+        res.json(updatedMedicine);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
