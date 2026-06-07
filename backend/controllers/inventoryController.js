@@ -147,9 +147,13 @@ export const postAdjustment = async (req, res) => {
 
 // Get Sorted, Filtered Transaction History scoped by pharmacyId
 export const getHistory = async (req, res) => {
-    const { id, medicineId, transactionType } = req.query;
+    const { id, medicineId, transactionType, branchId } = req.query;
     try {
-        const query = { pharmacyId: req.user.pharmacyId };
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && branchId) {
+            pharmacyId = branchId;
+        }
+        const query = { pharmacyId };
 
         if (id) {
             query._id = id;

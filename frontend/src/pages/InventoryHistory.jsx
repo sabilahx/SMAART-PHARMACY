@@ -199,17 +199,26 @@ export default function InventoryHistory() {
                     </p>
                 </div>
 
-                <button
-                    onClick={() => navigate('/inventory/transaction-new')}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer flex-shrink-0"
-                    style={{
-                        background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)',
-                        color: '#0a0d14',
-                    }}
-                >
-                    <span className="material-symbols-rounded text-base">add</span>
-                    <span>New Transaction</span>
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                        onClick={() => window.open('/api/compliance/export', '_blank')}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer bg-white/[0.03] border border-white/[0.06] text-white/80 hover:text-white hover:bg-white/[0.06]"
+                    >
+                        <span className="material-symbols-rounded text-base">download</span>
+                        <span>Compliance Export</span>
+                    </button>
+                    <button
+                        onClick={() => navigate('/inventory/transaction-new')}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer"
+                        style={{
+                            background: 'linear-gradient(135deg, #00c2cc 0%, #0099a8 100%)',
+                            color: '#0a0d14',
+                        }}
+                    >
+                        <span className="material-symbols-rounded text-base">add</span>
+                        <span>New Transaction</span>
+                    </button>
+                </div>
             </div>
 
             {/* Summary KPI row */}

@@ -13,6 +13,8 @@ import InventoryTransactionForm from './pages/InventoryTransactionForm';
 import TransactionDetails from './pages/TransactionDetails';
 import Dashboard from './pages/Dashboard';
 import ExpiryDashboard from './pages/ExpiryDashboard';
+import BranchComparison from './pages/BranchComparison';
+import ReorderIntelligence from './pages/ReorderIntelligence';
 
 export default function App() {
     return (
@@ -34,6 +36,8 @@ export default function App() {
                             <Route path="/inventory/transaction-new" element={<InventoryTransactionForm />} />
                             <Route path="/inventory/transaction/:id" element={<TransactionDetails />} />
                             <Route path="/expiry-dashboard" element={<ExpiryDashboard />} />
+                            <Route path="/branch-comparison" element={<BranchComparison />} />
+                            <Route path="/reorder-intelligence" element={<ReorderIntelligence />} />
                             
                             {/* Fallback routes redirection */}
                             <Route path="*" element={<Navigate to="/dashboard" replace />} />

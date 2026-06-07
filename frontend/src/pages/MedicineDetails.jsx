@@ -151,6 +151,29 @@ export default function MedicineDetails() {
                 </div>
             )}
 
+            {/* Low stock alerts banner */}
+            {medicine.stock <= (medicine.reorderPoint !== undefined ? medicine.reorderPoint : 20) && (
+                <div className="flex items-center gap-3 p-4 rounded-xl text-sm animate-fade-in"
+                    style={{ 
+                        background: medicine.stock === 0 ? 'rgba(248,113,113,0.05)' : 'rgba(245,158,11,0.05)', 
+                        border: medicine.stock === 0 ? '1px solid rgba(248,113,113,0.15)' : '1px solid rgba(245,158,11,0.15)', 
+                        color: medicine.stock === 0 ? '#fca5a5' : '#fcd34d' 
+                    }}>
+                    <span className="material-symbols-rounded text-lg" style={{ color: medicine.stock === 0 ? '#f87171' : '#f59e0b' }}>
+                        {medicine.stock === 0 ? 'gpp_bad' : 'gpp_maybe'}
+                    </span>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-xs">
+                            {medicine.stock === 0 ? 'OUT OF STOCK' : 'LOW STOCK ALERT'}
+                        </span>
+                        <span className="text-[11px] opacity-80 font-medium">
+                            Current stock is {medicine.stock} units, which is {medicine.stock === 0 ? 'depleted' : `below the safety threshold of ${medicine.reorderPoint !== undefined ? medicine.reorderPoint : 20} units`}. 
+                            Please use the Reorder Intelligence system to replenish.
+                        </span>
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Left column */}
                 <div className="lg:col-span-2 flex flex-col gap-4">
@@ -201,7 +224,19 @@ export default function MedicineDetails() {
                     {/* KPI metrics row */}
                     <div className="grid grid-cols-3 gap-3">
                         {[
-                            { label: 'Stock Level', value: medicine.stock.toLocaleString('en-IN'), sub: 'units on hand', color: medicine.stock === 0 ? '#f87171' : medicine.stock < 20 ? '#f59e0b' : '#34d399', icon: 'inventory' },
+                            { 
+                                label: 'Stock Level', 
+                                value: medicine.stock.toLocaleString('en-IN'), 
+                                sub: medicine.stock <= (medicine.reorderPoint !== undefined ? medicine.reorderPoint : 20) 
+                                    ? `Below threshold (${medicine.reorderPoint !== undefined ? medicine.reorderPoint : 20})` 
+                                    : `Safe threshold (${medicine.reorderPoint !== undefined ? medicine.reorderPoint : 20})`, 
+                                color: medicine.stock === 0 
+                                    ? '#f87171' 
+                                    : medicine.stock <= (medicine.reorderPoint !== undefined ? medicine.reorderPoint : 20) 
+                                        ? '#f59e0b' 
+                                        : '#34d399', 
+                                icon: 'inventory' 
+                            },
                             { label: 'Unit Cost', value: `₹${medicine.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: 'per unit', color: '#00c2cc', icon: 'payments' },
                             { label: 'Asset Value', value: `₹${assetValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, sub: 'total valuation', color: '#a78bfa', icon: 'account_balance_wallet' },
                         ].map(k => (
@@ -254,6 +289,7 @@ export default function MedicineDetails() {
                             <DetailField label="Category" value={medicine.category} />
                             <DetailField label="Supplier" value={medicine.supplier} />
                             <DetailField label="Status" value={medicine.status} />
+                            <DetailField label="Reorder Threshold" value={`${medicine.reorderPoint !== undefined ? medicine.reorderPoint : 20} units`} />
                             <DetailField label="Expiry Date" value={medicine.expiryDate ? new Date(medicine.expiryDate).toLocaleDateString() : 'No Expiry Set'} />
                             <DetailField label="Registered" value={new Date(medicine.createdAt).toLocaleDateString()} />
                         </div>

@@ -34,7 +34,7 @@ function FormField({ label, required, children, fullWidth }) {
 export default function EditMedicine() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({ name: '', ndc: '', category: 'General', stock: '', price: '', supplier: '', status: 'Active', expiryDate: '' });
+    const [formData, setFormData] = useState({ name: '', ndc: '', category: 'General', stock: '', price: '', supplier: '', status: 'Active', expiryDate: '', reorderPoint: '20' });
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -54,7 +54,8 @@ export default function EditMedicine() {
                     price: d.price.toString(),
                     supplier: d.supplier || '',
                     status: d.status || 'Active',
-                    expiryDate: d.expiryDate ? d.expiryDate.split('T')[0] : ''
+                    expiryDate: d.expiryDate ? d.expiryDate.split('T')[0] : '',
+                    reorderPoint: d.reorderPoint !== undefined && d.reorderPoint !== null ? d.reorderPoint.toString() : '20'
                 });
             } catch (err) { setError(err.message); }
             finally { setLoading(false); }
@@ -73,7 +74,12 @@ export default function EditMedicine() {
             const res = await fetch(`/api/medicines/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...formData, stock: Number(formData.stock), price: Number(formData.price) }),
+                body: JSON.stringify({
+                    ...formData,
+                    stock: Number(formData.stock),
+                    price: Number(formData.price),
+                    reorderPoint: Number(formData.reorderPoint)
+                }),
             });
             const d = await res.json();
             if (!res.ok) throw new Error(d.message || 'Failed to update record.');
@@ -164,6 +170,10 @@ export default function EditMedicine() {
                         <FormField label="Stock Quantity">
                             <input type="number" name="stock" value={formData.stock} onChange={handleChange}
                                 className={baseClass} {...getFieldStyle('stock')} />
+                        </FormField>
+                        <FormField label="Reorder Threshold (units)" required>
+                            <input type="number" name="reorderPoint" value={formData.reorderPoint} onChange={handleChange}
+                                className={baseClass} {...getFieldStyle('reorderPoint')} />
                         </FormField>
                         <FormField label="Supplier">
                             <input type="text" name="supplier" value={formData.supplier} onChange={handleChange}

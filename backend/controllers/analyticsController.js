@@ -1,9 +1,19 @@
 import Medicine from '../models/Medicine.js';
 import InventoryTransaction from '../models/InventoryTransaction.js';
+import BranchHealthHistory from '../models/BranchHealthHistory.js';
+import Alert from '../models/Alert.js';
+import ReorderRequest from '../models/ReorderRequest.js';
+import Pharmacy from '../models/Pharmacy.js';
+import User from '../models/User.js';
 
 export const getDashboardData = async (req, res) => {
     try {
-        const pharmacyId = req.user.pharmacyId;
+        let pharmacyId = req.user.pharmacyId;
+        // Support admin branch context override
+        if (req.user.role === 'Admin' && req.query.branchId) {
+            pharmacyId = req.query.branchId;
+        }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -24,13 +34,16 @@ export const getDashboardData = async (req, res) => {
         let lowStockCount = 0;
         let expiredCount = 0;
         let nearExpiryCount = 0;
+        let deadStockValue = 0;
+        let atRiskValue = 0;
 
         const expiryAlerts = [];
         const lowStockAlerts = [];
 
         medicines.forEach(m => {
             const isZero = m.stock === 0;
-            const isLow = m.stock > 0 && m.stock < 20;
+            const reorderThreshold = m.reorderPoint !== undefined ? m.reorderPoint : 20;
+            const isLow = m.stock > 0 && m.stock < reorderThreshold;
 
             if (m.status === 'Active') {
                 activeChannelsCount++;
@@ -45,24 +58,31 @@ export const getDashboardData = async (req, res) => {
 
             if (m.expiryDate) {
                 const expDate = new Date(m.expiryDate);
+                const val = m.stock * m.price;
                 if (expDate < today) {
                     expiredCount++;
+                    deadStockValue += val;
                     expiryAlerts.push({
                         _id: m._id,
                         name: m.name,
                         ndc: m.ndc,
                         stock: m.stock,
+                        price: m.price,
+                        value: val,
                         expiryDate: m.expiryDate,
                         status: 'Expired',
                         category: m.category
                     });
                 } else if (expDate <= thirtyDaysFromNow) {
                     nearExpiryCount++;
+                    atRiskValue += val;
                     expiryAlerts.push({
                         _id: m._id,
                         name: m.name,
                         ndc: m.ndc,
                         stock: m.stock,
+                        price: m.price,
+                        value: val,
                         expiryDate: m.expiryDate,
                         status: 'Near Expiry',
                         category: m.category
@@ -70,6 +90,59 @@ export const getDashboardData = async (req, res) => {
                 }
             }
         });
+
+        // ── Health Score Calculation ──
+        // Base: 100
+        // - Expired: -15 points per SKU (with stock > 0), max 45
+        // - Near Expiry: -5 points per SKU (with stock > 0), max 25
+        // - Out of Stock (Active): -10 points per SKU, max 20
+        // - Low Stock (Active): -5 points per SKU, max 20
+        const expiredSKUCount = expiryAlerts.filter(x => x.status === 'Expired' && x.stock > 0).length;
+        const nearExpirySKUCount = expiryAlerts.filter(x => x.status === 'Near Expiry' && x.stock > 0).length;
+
+        const expiredDeduction = Math.min(45, expiredSKUCount * 15);
+        const nearExpiryDeduction = Math.min(25, nearExpirySKUCount * 5);
+        const outOfStockDeduction = Math.min(20, outOfStockCount * 10);
+        const lowStockDeduction = Math.min(20, lowStockCount * 5);
+
+        let healthScore = 100 - expiredDeduction - nearExpiryDeduction - outOfStockDeduction - lowStockDeduction;
+        healthScore = Math.max(0, healthScore);
+
+        // ── Health Score Drop Check ──
+        // Find latest history entry before today
+        const latestHistory = await BranchHealthHistory.findOne({
+            pharmacyId,
+            date: { $lt: today }
+        }).sort({ date: -1 });
+
+        if (latestHistory && latestHistory.healthScore - healthScore >= 5) {
+            // Log a DB alert if we haven't today
+            const todayAlert = await Alert.findOne({
+                pharmacyId,
+                alertType: 'Health',
+                createdAt: { $gte: today }
+            });
+            if (!todayAlert) {
+                await Alert.create({
+                    pharmacyId,
+                    title: 'Branch Health Score Drop Detected',
+                    message: `Inventory health score has dropped from ${latestHistory.healthScore} to ${healthScore}. Review low stock or expired medications immediately.`,
+                    severity: 'critical',
+                    alertType: 'Health'
+                });
+            }
+        }
+
+        // Upsert today's branch health history
+        const startOfToday = new Date(today);
+        const endOfToday = new Date(today);
+        endOfToday.setHours(23, 59, 59, 999);
+
+        await BranchHealthHistory.findOneAndUpdate(
+            { pharmacyId, date: { $gte: startOfToday, $lte: endOfToday } },
+            { healthScore, date: new Date() },
+            { upsert: true, new: true }
+        );
 
         // 2. Recent Transactions
         const recentTransactions = await InventoryTransaction.find({ pharmacyId })
@@ -105,7 +178,7 @@ export const getDashboardData = async (req, res) => {
             const d = new Date();
             d.setDate(d.getDate() - (6 - i));
             const dateStr = d.toISOString().split('T')[0];
-            const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const label = d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
             dailyMovementsMap[dateStr] = { date: dateStr, label, stockIn: 0, stockOut: 0 };
         }
 
@@ -122,6 +195,20 @@ export const getDashboardData = async (req, res) => {
 
         const dailyMovements = Object.values(dailyMovementsMap);
 
+        // 5. Active Alerts from Database
+        const dbAlertsList = await Alert.find({ pharmacyId, isRead: false })
+            .sort({ createdAt: -1 });
+
+        // 6. Briefing Widget Summary
+        const pendingOrdersCount = await ReorderRequest.countDocuments({ pharmacyId, status: 'Ordered' });
+        const dailyTransactionsCount = await InventoryTransaction.countDocuments({ pharmacyId, createdAt: { $gte: today } });
+
+        const briefing = [
+            `Branch health stands at ${healthScore}/100. Dead stock is ₹${deadStockValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at risk from expired medicines.`,
+            `${lowStockCount} active items are below their reorder points. ${pendingOrdersCount} stock orders are currently pending arrival in transit.`,
+            `Recorded ${dailyTransactionsCount} stock movements today by branch operators.`
+        ];
+
         res.json({
             metrics: {
                 totalValuation,
@@ -129,14 +216,100 @@ export const getDashboardData = async (req, res) => {
                 outOfStock: outOfStockCount,
                 lowStock: lowStockCount,
                 expired: expiredCount,
-                nearExpiry: nearExpiryCount
+                nearExpiry: nearExpiryCount,
+                deadStockValue,
+                atRiskValue,
+                healthScore
             },
             expiryAlerts: expiryAlerts.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate)),
             lowStockAlerts: lowStockAlerts.sort((a, b) => a.stock - b.stock),
             recentTransactions,
             categoryData,
-            dailyMovements
+            dailyMovements,
+            dbAlerts: dbAlertsList,
+            briefing
         });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// Admin Branches Comparison View Controller
+export const getAdminBranchesComparison = async (req, res) => {
+    try {
+        if (req.user.role !== 'Admin') {
+            return res.status(403).json({ message: 'Forbidden: only system admins can view comparisons.' });
+        }
+
+        const pharmacies = await Pharmacy.find({});
+        const comparisonData = [];
+
+        for (const p of pharmacies) {
+            const medicines = await Medicine.find({
+                pharmacyId: p._id,
+                status: { $ne: 'Archived' }
+            });
+
+            const userCount = await User.countDocuments({ pharmacyId: p._id });
+            const alertCount = await Alert.countDocuments({ pharmacyId: p._id, isRead: false });
+
+            let totalValuation = 0;
+            let outOfStockCount = 0;
+            let lowStockCount = 0;
+            let expiredSKUs = 0;
+            let nearExpirySKUs = 0;
+            let deadStockValue = 0;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+            thirtyDaysFromNow.setHours(23, 59, 59, 999);
+
+            medicines.forEach(m => {
+                totalValuation += m.stock * m.price;
+                const reorderThreshold = m.reorderPoint !== undefined ? m.reorderPoint : 20;
+
+                if (m.status === 'Active') {
+                    if (m.stock === 0) outOfStockCount++;
+                    if (m.stock > 0 && m.stock < reorderThreshold) lowStockCount++;
+                }
+
+                if (m.expiryDate) {
+                    const expDate = new Date(m.expiryDate);
+                    if (expDate < today) {
+                        if (m.stock > 0) expiredSKUs++;
+                        deadStockValue += m.stock * m.price;
+                    } else if (expDate <= thirtyDaysFromNow) {
+                        if (m.stock > 0) nearExpirySKUs++;
+                    }
+                }
+            });
+
+            // Calculate Health Score
+            const expiredDeduction = Math.min(45, expiredSKUs * 15);
+            const nearExpiryDeduction = Math.min(25, nearExpirySKUs * 5);
+            const outOfStockDeduction = Math.min(20, outOfStockCount * 10);
+            const lowStockDeduction = Math.min(20, lowStockCount * 5);
+
+            let healthScore = 100 - expiredDeduction - nearExpiryDeduction - outOfStockDeduction - lowStockDeduction;
+            healthScore = Math.max(0, healthScore);
+
+            comparisonData.push({
+                pharmacyId: p._id,
+                name: p.name,
+                address: p.address,
+                healthScore,
+                totalValuation,
+                deadStockValue,
+                lowStockCount,
+                userCount,
+                alertCount
+            });
+        }
+
+        res.json(comparisonData);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

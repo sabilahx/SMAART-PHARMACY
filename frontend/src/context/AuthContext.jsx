@@ -6,6 +6,19 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [activeBranch, setActiveBranch] = useState(null);
+
+    useEffect(() => {
+        if (user && user.pharmacy) {
+            setActiveBranch(user.pharmacy);
+        } else {
+            setActiveBranch(null);
+        }
+    }, [user]);
+
+    const switchBranch = (id, name) => {
+        setActiveBranch({ id, name });
+    };
 
     const checkAuth = async () => {
         try {
@@ -71,7 +84,9 @@ export const AuthProvider = ({ children }) => {
             isAuthenticated: !!user,
             login,
             logout,
-            checkAuth
+            checkAuth,
+            activeBranch,
+            switchBranch
         }}>
             {children}
         </AuthContext.Provider>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 // ── Health score 0-100 ──
 function calcHealth(meds) {
@@ -8,7 +9,7 @@ function calcHealth(meds) {
     const total = meds.filter(m => m.status !== 'Archived');
     if (!total.length) return 0;
     const ratio = active.length / total.length;
-    const low = active.filter(m => m.stock > 0 && m.stock < 20).length;
+    const low = active.filter(m => m.stock > 0 && m.stock < (m.reorderPoint !== undefined ? m.reorderPoint : 20)).length;
     const zero = active.filter(m => m.stock === 0).length;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -39,7 +40,7 @@ const CATEGORIES = ['All', 'Cardiovascular', 'Anti-infective', 'Endocrine', 'Eme
 function getInsights(meds) {
     const active = meds.filter(m => m.status === 'Active');
     const zero = active.filter(m => m.stock === 0);
-    const low = active.filter(m => m.stock > 0 && m.stock < 20);
+    const low = active.filter(m => m.stock > 0 && m.stock < (m.reorderPoint !== undefined ? m.reorderPoint : 20));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const thirtyDaysFromNow = new Date();
@@ -157,7 +158,8 @@ function MedCard({ item, query, index, onView, onEdit }) {
     const ci = CAT_ICONS[item.category] || 'medication';
     const sc = STATUS_CFG[item.status] || STATUS_CFG.Archived;
     const isZero = item.stock === 0;
-    const isLow = item.stock > 0 && item.stock < 20;
+    const reorderThreshold = item.reorderPoint !== undefined ? item.reorderPoint : 20;
+    const isLow = item.stock > 0 && item.stock < reorderThreshold;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -227,8 +229,8 @@ function MedCard({ item, query, index, onView, onEdit }) {
                         <div 
                             className="h-full rounded-full transition-all duration-500"
                             style={{ 
-                                width: `${Math.min(100, (item.stock / 150) * 100)}%`,
-                                background: (item.stock < 20) ? '#f87171' : cc
+                                width: `${Math.min(100, (item.stock / (reorderThreshold * 2 || 100)) * 100)}%`,
+                                background: (item.stock < reorderThreshold) ? '#f87171' : cc
                             }}
                         />
                     </div>
@@ -300,6 +302,7 @@ function MedCard({ item, query, index, onView, onEdit }) {
 }
 
 export default function MedicineList() {
+    const { activeBranch } = useAuth();
     const [medicines, setMedicines] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -312,7 +315,10 @@ export default function MedicineList() {
     const fetchMedicines = async () => {
         setLoading(true); setError(null);
         try {
-            const url = statusFilter !== 'All' ? `/api/medicines?status=${statusFilter}` : '/api/medicines';
+            let url = statusFilter !== 'All' ? `/api/medicines?status=${statusFilter}` : '/api/medicines';
+            if (activeBranch) {
+                url += statusFilter !== 'All' ? `&branchId=${activeBranch.id}` : `?branchId=${activeBranch.id}`;
+            }
             const res = await fetch(url);
             if (!res.ok) { if (res.status === 401) { navigate('/login'); return; } throw new Error('Failed to load catalog.'); }
             setMedicines(await res.json());
@@ -320,7 +326,7 @@ export default function MedicineList() {
         finally { setLoading(false); }
     };
 
-    useEffect(() => { fetchMedicines(); }, [statusFilter]);
+    useEffect(() => { fetchMedicines(); }, [statusFilter, activeBranch]);
 
     // Handle "/" keyboard shortcut to focus search input
     useEffect(() => {

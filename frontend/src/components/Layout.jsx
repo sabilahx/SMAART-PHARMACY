@@ -59,12 +59,149 @@ function getPageMeta(pathname) {
 }
 
 export default function Layout() {
-    const { user, logout } = useAuth();
+    const { user, logout, activeBranch, switchBranch } = useAuth();
     const navigate = useNavigate();
     const { pathname } = useLocation();
     const [collapsed, setCollapsed] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const pageMeta = getPageMeta(pathname);
+
+    // ── Branches & Alerts Polling State ──
+    const [branches, setBranches] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchAlertCount = async () => {
+        try {
+            const res = await fetch('/api/alerts');
+            if (res.ok) {
+                const alerts = await res.json();
+                setUnreadCount(alerts.length);
+            }
+        } catch (err) {
+            console.error('Error fetching alerts count:', err);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchAlertCount();
+            const interval = setInterval(fetchAlertCount, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user, activeBranch]);
+
+    useEffect(() => {
+        if (user?.role === 'Admin') {
+            const fetchBranches = async () => {
+                try {
+                    const res = await fetch('/api/analytics/admin/branches');
+                    if (res.ok) {
+                        const data = await res.json();
+                        setBranches(data);
+                    }
+                } catch (err) {
+                    console.error('Error fetching branches list:', err);
+                }
+            };
+            fetchBranches();
+        }
+    }, [user]);
+
+    // ── RBAC Navigation Setup ──
+    const navItems = [
+        {
+            to: '/dashboard',
+            icon: 'dashboard',
+            label: 'Analytics Dashboard',
+            sublabel: 'Operational metrics',
+        }
+    ];
+
+    if (user?.role === 'Admin') {
+        navItems.push(
+            {
+                to: '/branch-comparison',
+                icon: 'compare_arrows',
+                label: 'Branch Comparison',
+                sublabel: 'Compare locations',
+            },
+            {
+                to: '/medicines',
+                end: true,
+                icon: 'layers',
+                label: 'Medicine Ledger',
+                sublabel: 'Stock catalog',
+            },
+            {
+                to: '/inventory/history',
+                icon: 'swap_vert',
+                label: 'Stock Movements',
+                sublabel: 'Audit trail',
+            },
+            {
+                to: '/reorder-intelligence',
+                icon: 'shopping_cart',
+                label: 'Reorder Center',
+                sublabel: 'Auto replenish',
+            }
+        );
+    } else if (user?.role === 'Manager') {
+        navItems.push(
+            {
+                to: '/expiry-dashboard',
+                icon: 'hourglass_empty',
+                label: 'Expiry Intelligence',
+                sublabel: 'Risk & dead stock',
+            },
+            {
+                to: '/medicines',
+                end: true,
+                icon: 'layers',
+                label: 'Medicine Ledger',
+                sublabel: 'Stock catalog',
+            },
+            {
+                to: '/inventory/history',
+                icon: 'swap_vert',
+                label: 'Stock Movements',
+                sublabel: 'Audit trail',
+            },
+            {
+                to: '/reorder-intelligence',
+                icon: 'shopping_cart',
+                label: 'Reorder Center',
+                sublabel: 'Auto replenish',
+            }
+        );
+    } else if (user?.role === 'Pharmacist') {
+        navItems.push(
+            {
+                to: '/medicines',
+                end: true,
+                icon: 'layers',
+                label: 'Medicine Ledger',
+                sublabel: 'Stock catalog',
+            },
+            {
+                to: '/medicines/add',
+                icon: 'add_circle',
+                label: 'Add Medicine',
+                sublabel: 'New catalog entry',
+            },
+            {
+                to: '/inventory/transaction-new',
+                icon: 'edit_note',
+                label: 'New Transaction',
+                sublabel: 'Record movement',
+            },
+            {
+                to: '/inventory/history',
+                icon: 'swap_vert',
+                label: 'Stock Movements',
+                sublabel: 'Audit trail',
+            }
+        );
+    }
 
     // ── Spotlight Command Center State ──
     const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
@@ -231,7 +368,7 @@ export default function Layout() {
                         </span>
                     )}
 
-                    {NAV_ITEMS.map(item => (
+                    {navItems.map(item => (
                         <NavLink
                             key={item.to}
                             to={item.to}
@@ -259,19 +396,31 @@ export default function Layout() {
                                             style={{ background: '#00c2cc', boxShadow: '0 0 8px rgba(0,194,204,0.8)' }}
                                         />
                                     )}
-                                    <span
-                                        className="material-symbols-rounded flex-shrink-0 transition-all"
-                                        style={{
-                                            fontSize: '18px',
-                                            fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
-                                        }}
-                                    >
-                                        {item.icon}
-                                    </span>
+                                    <div className="relative flex-shrink-0">
+                                        <span
+                                            className="material-symbols-rounded flex-shrink-0 transition-all"
+                                            style={{
+                                                fontSize: '18px',
+                                                fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
+                                            }}
+                                        >
+                                            {item.icon}
+                                        </span>
+                                        {collapsed && item.to === '/dashboard' && unreadCount > 0 && (
+                                            <div className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full bg-red-500 border border-[#0a0d14] animate-pulse" />
+                                        )}
+                                    </div>
                                     {!collapsed && (
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-xs font-semibold truncate leading-tight">{item.label}</span>
-                                            <span className="text-[9px] truncate leading-tight opacity-60">{item.sublabel}</span>
+                                        <div className="flex-1 flex items-center justify-between min-w-0 pr-1">
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-xs font-semibold truncate leading-tight">{item.label}</span>
+                                                <span className="text-[9px] truncate leading-tight opacity-60">{item.sublabel}</span>
+                                            </div>
+                                            {item.to === '/dashboard' && unreadCount > 0 && (
+                                                <span className="flex-shrink-0 ml-1.5 w-4 h-4 rounded-full bg-red-500 text-[9px] font-black text-white flex items-center justify-center animate-pulse">
+                                                    {unreadCount}
+                                                </span>
+                                            )}
                                         </div>
                                     )}
                                 </>
@@ -360,19 +509,49 @@ export default function Layout() {
                             <span>Live</span>
                         </div>
 
-                        {/* Pharmacy name pill */}
-                        <div
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-300"
-                            style={{ 
-                                background: 'rgba(255,255,255,0.03)', 
-                                border: '1px solid rgba(255,255,255,0.07)', 
-                                color: 'var(--text-secondary)',
-                                boxShadow: '0 0 10px rgba(255,255,255,0.02)'
-                            }}
-                        >
-                            <span className="material-symbols-rounded text-sm" style={{ color: 'var(--brand)' }}>storefront</span>
-                            <span>{user?.pharmacy?.name || 'Pharmacy'}</span>
-                        </div>
+                        {/* Pharmacy name pill or Branch Switcher for Admin */}
+                        {user?.role === 'Admin' && branches.length > 0 ? (
+                            <div
+                                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300"
+                                style={{ 
+                                    background: 'rgba(15,20,32,0.85)', 
+                                    border: '1px solid rgba(0,194,204,0.25)', 
+                                    color: 'var(--text-secondary)',
+                                    boxShadow: '0 0 10px rgba(0,194,204,0.05)'
+                                }}
+                            >
+                                <span className="material-symbols-rounded text-sm" style={{ color: 'var(--brand)' }}>storefront</span>
+                                <select
+                                    value={activeBranch?.id || ''}
+                                    onChange={(e) => {
+                                        const selected = branches.find(b => b.pharmacyId === e.target.value);
+                                        if (selected) {
+                                            switchBranch(selected.pharmacyId, selected.name);
+                                        }
+                                    }}
+                                    className="bg-transparent border-none outline-none text-white font-medium cursor-pointer py-1 pr-1 text-xs"
+                                >
+                                    {branches.map(b => (
+                                        <option key={b.pharmacyId} value={b.pharmacyId} className="bg-[#0f1420] text-white">
+                                            {b.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <div
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-300"
+                                style={{ 
+                                    background: 'rgba(255,255,255,0.03)', 
+                                    border: '1px solid rgba(255,255,255,0.07)', 
+                                    color: 'var(--text-secondary)',
+                                    boxShadow: '0 0 10px rgba(255,255,255,0.02)'
+                                }}
+                            >
+                                <span className="material-symbols-rounded text-sm" style={{ color: 'var(--brand)' }}>storefront</span>
+                                <span>{activeBranch?.name || user?.pharmacy?.name || 'Pharmacy'}</span>
+                            </div>
+                        )}
                     </div>
                 </header>
 

@@ -50,10 +50,17 @@ const medicineSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    reorderPoint: {
+        type: Number,
+        required: true,
+        default: 20
     }
+}, {
+    timestamps: true
 });
 
 const Medicine = mongoose.model('Medicine', medicineSchema);

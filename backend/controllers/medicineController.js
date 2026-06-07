@@ -3,9 +3,13 @@ import InventoryLog from '../models/InventoryLog.js';
 
 // Get all medicines belonging to the logged-in user's pharmacy
 export const getMedicines = async (req, res) => {
-    const { status } = req.query;
+    const { status, branchId } = req.query;
     try {
-        const query = { pharmacyId: req.user.pharmacyId };
+        let pharmacyId = req.user.pharmacyId;
+        if (req.user.role === 'Admin' && branchId) {
+            pharmacyId = branchId;
+        }
+        const query = { pharmacyId };
         
         if (status) {
             query.status = status;
@@ -40,7 +44,7 @@ export const getMedicineById = async (req, res) => {
 
 // Create a new medicine record
 export const addMedicine = async (req, res) => {
-    const { name, ndc, category, stock, price, supplier, expiryDate } = req.body;
+    const { name, ndc, category, stock, price, supplier, expiryDate, reorderPoint } = req.body;
     try {
         if (!name || !ndc || price === undefined) {
             return res.status(400).json({ message: 'Name, NDC, and Price are required' });
@@ -56,7 +60,9 @@ export const addMedicine = async (req, res) => {
             status: 'Active',
             expiryDate: expiryDate ? new Date(expiryDate) : undefined,
             pharmacyId: req.user.pharmacyId, // Always bind to user's pharmacy
-            updatedBy: req.user.id
+            updatedBy: req.user.id,
+            createdBy: req.user.id,
+            reorderPoint: reorderPoint !== undefined ? Number(reorderPoint) : 20
         });
 
         const savedMedicine = await medicine.save();
@@ -84,7 +90,7 @@ export const addMedicine = async (req, res) => {
 
 // Update a medicine record (with status update support, preventing hard delete)
 export const updateMedicine = async (req, res) => {
-    const { name, ndc, category, stock, price, supplier, status, expiryDate } = req.body;
+    const { name, ndc, category, stock, price, supplier, status, expiryDate, reorderPoint } = req.body;
     try {
         const medicine = await Medicine.findOne({
             _id: req.params.id,
@@ -107,6 +113,7 @@ export const updateMedicine = async (req, res) => {
         if (price !== undefined) medicine.price = price;
         if (supplier !== undefined) medicine.supplier = supplier;
         if (expiryDate !== undefined) medicine.expiryDate = expiryDate ? new Date(expiryDate) : undefined;
+        if (reorderPoint !== undefined) medicine.reorderPoint = Number(reorderPoint);
         
         if (status !== undefined) {
             if (!['Active', 'Inactive', 'Archived'].includes(status)) {

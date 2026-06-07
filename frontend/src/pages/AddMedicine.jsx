@@ -36,7 +36,7 @@ const CATEGORY_COLORS = {
 export default function AddMedicine() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        name: '', ndc: '', category: 'General', stock: '', price: '', supplier: '', expiryDate: ''
+        name: '', ndc: '', category: 'General', stock: '', price: '', supplier: '', expiryDate: '', reorderPoint: 20
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
@@ -217,6 +217,20 @@ export default function AddMedicine() {
                             min="0"
                             className="w-full px-3 py-2 rounded-lg text-xs outline-none transition-all duration-200"
                             {...getField('stock')}
+                        />
+                    </FormField>
+
+                    {/* Reorder Threshold */}
+                    <FormField label="Reorder Threshold (units)" required>
+                        <input
+                            type="number"
+                            name="reorderPoint"
+                            value={formData.reorderPoint}
+                            onChange={handleChange}
+                            placeholder="20"
+                            min="0"
+                            className="w-full px-3 py-2 rounded-lg text-xs outline-none transition-all duration-200"
+                            {...getField('reorderPoint')}
                         />
                     </FormField>
 

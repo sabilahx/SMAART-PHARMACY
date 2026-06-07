@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const CAT_COLORS = {
     Cardiovascular: '#f87171', 'Anti-infective': '#34d399', Endocrine: '#60a5fa',
@@ -14,6 +15,7 @@ const CAT_ICONS = {
 
 export default function Dashboard() {
     const navigate = useNavigate();
+    const { activeBranch } = useAuth();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -23,7 +25,8 @@ export default function Dashboard() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/analytics/dashboard');
+            const url = activeBranch ? `/api/analytics/dashboard?branchId=${activeBranch.id}` : '/api/analytics/dashboard';
+            const res = await fetch(url);
             if (!res.ok) {
                 if (res.status === 401) {
                     navigate('/login');
@@ -41,7 +44,7 @@ export default function Dashboard() {
 
     useEffect(() => {
         fetchDashboard();
-    }, []);
+    }, [activeBranch]);
 
     if (loading) {
         return (
@@ -68,7 +71,7 @@ export default function Dashboard() {
         );
     }
 
-    const { metrics, expiryAlerts, lowStockAlerts, recentTransactions, categoryData, dailyMovements } = data;
+    const { metrics, expiryAlerts, lowStockAlerts, recentTransactions, categoryData, dailyMovements, dbAlerts, briefing } = data;
 
     // Calculate maximum movement volume for chart scaling
     const maxMovement = Math.max(
@@ -108,6 +111,31 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {/* ── Today's Briefing Widget ── */}
+            {briefing && briefing.length > 0 && (
+                <div className="relative rounded-xl p-4 overflow-hidden glass border border-[#00c2cc]/15 shadow-lg shadow-[#00c2cc]/5">
+                    {/* Glowing highlight */}
+                    <div className="absolute -left-16 -top-16 w-32 h-32 rounded-full bg-[#00c2cc]/10 pointer-events-none filter blur-xl" />
+                    
+                    <div className="flex items-start gap-3 relative z-10">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#00c2cc]/10 text-[#00c2cc]">
+                            <span className="material-symbols-rounded text-sm">auto_awesome</span>
+                        </div>
+                        <div className="flex-1 flex flex-col gap-1.5">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-sky-400 leading-none">Today's Executive Briefing</h4>
+                            <ul className="flex flex-col gap-1 text-[11px] text-slate-300 list-none font-medium">
+                                {briefing.map((line, idx) => (
+                                    <li key={idx} className="flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#00c2cc]" />
+                                        <span>{line}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ── Operational KPIs Grid ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Total Valuation */}
@@ -126,7 +154,56 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Active Medicines */}
+                {/* Inventory Health Score */}
+                <div className="rounded-lg p-4 flex items-center justify-between relative overflow-hidden backdrop-blur-md"
+                    style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div className="flex flex-col">
+                        <span className="text-2xl md:text-3xl font-extrabold text-white tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
+                            {metrics.healthScore || 0}%
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Branch Health Score</span>
+                    </div>
+                    {/* SVG Circle Gauge */}
+                    <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-full h-full transform -rotate-90">
+                            <circle cx="24" cy="24" r="20" stroke="rgba(255,255,255,0.03)" strokeWidth="3" fill="transparent" />
+                            <circle cx="24" cy="24" r="20" 
+                                stroke={
+                                    (metrics.healthScore || 0) >= 90 ? '#10b981' : 
+                                    (metrics.healthScore || 0) >= 75 ? '#f59e0b' : '#ef4444'
+                                } 
+                                strokeWidth="3" fill="transparent"
+                                strokeDasharray={2 * Math.PI * 20} 
+                                strokeDashoffset={2 * Math.PI * 20 - ((metrics.healthScore || 0) / 100) * 2 * Math.PI * 20} 
+                                strokeLinecap="round"
+                                className="transition-all duration-500 ease-out" />
+                        </svg>
+                        <span className="absolute text-[10px] font-black text-white">{(metrics.healthScore || 0)}</span>
+                    </div>
+                </div>
+
+                {/* Dead Stock Counter */}
+                <div className="rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden backdrop-blur-md"
+                    style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div className="w-8 h-8 rounded-md flex items-center justify-center bg-red-400/[0.04] text-red-400">
+                        <span className="material-symbols-rounded text-base">event_busy</span>
+                    </div>
+                    <div className="flex flex-col mt-1">
+                        <span className="text-2xl md:text-3xl font-extrabold text-red-400 tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
+                            ₹{(metrics.deadStockValue || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </span>
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                            <span>Dead Stock Counter</span>
+                            {metrics.atRiskValue > 0 && (
+                                <span className="text-[8px] text-amber-400 font-extrabold pl-1 select-none">
+                                    (₹{metrics.atRiskValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} risk)
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Catalog Channels */}
                 <div className="rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden backdrop-blur-md"
                     style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
                     <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none rounded-full"
@@ -139,54 +216,6 @@ export default function Dashboard() {
                             {metrics.activeChannels}
                         </span>
                         <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Catalog Channels</span>
-                    </div>
-                </div>
-
-                {/* Stock Outages / Low stock */}
-                <div className="rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden backdrop-blur-md"
-                    style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none rounded-full"
-                        style={{ background: 'radial-gradient(circle, rgba(248, 113, 113, 0.03) 0%, transparent 70%)', filter: 'blur(15px)' }} />
-                    <div className="w-8 h-8 rounded-md flex items-center justify-center bg-red-400/[0.04] text-red-400">
-                        <span className="material-symbols-rounded text-base">warning</span>
-                    </div>
-                    <div className="flex flex-col mt-1">
-                        <div className="flex items-baseline gap-1.5">
-                            <span className="text-2xl md:text-3xl font-extrabold tracking-tight text-white" style={{ fontFamily: "'Lora', serif" }}>
-                                {metrics.outOfStock + metrics.lowStock}
-                            </span>
-                            {(metrics.outOfStock > 0 || metrics.lowStock > 0) && (
-                                <span className="text-[8px] font-extrabold px-1.5 py-0.2 rounded"
-                                    style={{ background: 'rgba(248,113,113,0.08)', color: '#f87171' }}>
-                                    {metrics.outOfStock} Out
-                                </span>
-                            )}
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Low & Depleted Stock</span>
-                    </div>
-                </div>
-
-                {/* Expired / Near expiry */}
-                <div className="rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden backdrop-blur-md"
-                    style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none rounded-full"
-                        style={{ background: 'radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%)', filter: 'blur(15px)' }} />
-                    <div className="w-8 h-8 rounded-md flex items-center justify-center bg-amber-400/[0.04] text-amber-400">
-                        <span className="material-symbols-rounded text-base">event_busy</span>
-                    </div>
-                    <div className="flex flex-col mt-1">
-                        <div className="flex items-baseline gap-1.5">
-                            <span className="text-2xl md:text-3xl font-extrabold tracking-tight text-white" style={{ fontFamily: "'Lora', serif" }}>
-                                {metrics.expired + metrics.nearExpiry}
-                            </span>
-                            {metrics.expired > 0 && (
-                                <span className="text-[8px] font-extrabold px-1.5 py-0.2 rounded animate-pulse"
-                                    style={{ background: 'rgba(248,113,113,0.08)', color: '#f87171' }}>
-                                    {metrics.expired} Expired
-                                </span>
-                            )}
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-[0.08em] mt-0.5" style={{ color: 'var(--text-secondary)' }}>Expiry Warnings</span>
                     </div>
                 </div>
             </div>
@@ -374,8 +403,8 @@ export default function Dashboard() {
                             <span className="material-symbols-rounded text-base text-amber-400">event_busy</span>
                             <span className="text-xs font-bold uppercase tracking-[0.08em] text-white">Expiry Warnings ({expiryAlerts.length})</span>
                         </div>
-                        <button onClick={() => navigate('/medicines')} className="text-[10px] font-bold hover:underline" style={{ color: '#00c2cc' }}>
-                            View Ledger
+                        <button onClick={() => navigate('/expiry-dashboard')} className="text-[10px] font-bold hover:underline" style={{ color: '#00c2cc' }}>
+                            View Expiries
                         </button>
                     </div>
 
@@ -393,15 +422,14 @@ export default function Dashboard() {
                                         className="p-2.5 rounded-lg flex items-center justify-between border border-transparent hover:border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] cursor-pointer transition-all duration-200">
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-xs font-semibold text-white truncate">{med.name}</span>
-                                            <span className="text-[9px] font-mono opacity-50 mt-0.5" style={{ color: 'var(--text-muted)' }}>NDC: {med.ndc}</span>
+                                            <span className="text-[9px] mt-0.5 text-slate-400">
+                                                Val: ₹{(med.value || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })} · Exp: {new Date(med.expiryDate).toLocaleDateString()}
+                                            </span>
                                         </div>
-                                        <div className="flex flex-col items-end flex-shrink-0 text-right pl-2">
-                                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded"
+                                        <div className="flex-shrink-0 pl-2">
+                                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded"
                                                 style={{ background: `${color}10`, color }}>
                                                 {med.status}
-                                            </span>
-                                            <span className="text-[9px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                                                {new Date(med.expiryDate).toLocaleDateString()}
                                             </span>
                                         </div>
                                     </div>
@@ -419,8 +447,8 @@ export default function Dashboard() {
                             <span className="material-symbols-rounded text-base text-red-400">warning</span>
                             <span className="text-xs font-bold uppercase tracking-[0.08em] text-white">Low Stock Warning ({lowStockAlerts.length})</span>
                         </div>
-                        <button onClick={() => navigate('/inventory/transaction-new')} className="text-[10px] font-bold hover:underline" style={{ color: '#00c2cc' }}>
-                            Refill Stock
+                        <button onClick={() => navigate('/reorder-intelligence')} className="text-[10px] font-bold hover:underline" style={{ color: '#00c2cc' }}>
+                            Restock Queue
                         </button>
                     </div>
 
@@ -438,13 +466,12 @@ export default function Dashboard() {
                                         className="p-2.5 rounded-lg flex items-center justify-between border border-transparent hover:border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] cursor-pointer transition-all duration-200">
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-xs font-semibold text-white truncate">{med.name}</span>
-                                            <span className="text-[9px] font-mono opacity-50 mt-0.5" style={{ color: 'var(--text-muted)' }}>NDC: {med.ndc}</span>
+                                            <span className="text-[9px] mt-0.5 text-slate-400">
+                                                Stock: {med.stock} · Reorder point: {med.reorderPoint !== undefined ? med.reorderPoint : 20}
+                                            </span>
                                         </div>
                                         <div className="flex flex-col items-end flex-shrink-0 text-right pl-2">
-                                            <span className="text-xs font-black text-white" style={{ fontFamily: "'Lora', serif" }}>
-                                                {med.stock.toLocaleString()} units
-                                            </span>
-                                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded mt-0.5"
+                                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded"
                                                 style={{
                                                     background: isZero ? 'rgba(248,113,113,0.08)' : 'rgba(245,158,11,0.08)',
                                                     color: isZero ? '#f87171' : '#f59e0b'
@@ -459,60 +486,78 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* Recent Transactions Timeline */}
+                {/* Critical Alerts Feed Widget */}
                 <div className="rounded-lg p-5 flex flex-col gap-4 backdrop-blur-md h-[340px]"
                     style={{ background: 'rgba(15,20,32,0.3)', border: '1px solid rgba(255,255,255,0.03)' }}>
                     <div className="flex items-center justify-between border-b pb-2.5" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
                         <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-rounded text-base text-sky-400">history</span>
-                            <span className="text-xs font-bold uppercase tracking-[0.08em] text-white">Recent Transactions</span>
+                            <span className="material-symbols-rounded text-base text-cyan-400">notifications_active</span>
+                            <span className="text-xs font-bold uppercase tracking-[0.08em] text-white">Critical Alerts Feed ({dbAlerts?.length || 0})</span>
                         </div>
-                        <button onClick={() => navigate('/inventory/history')} className="text-[10px] font-bold hover:underline" style={{ color: '#00c2cc' }}>
-                            View Audit
-                        </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto scrollable flex flex-col gap-3 relative">
-                        {/* Timeline left border line */}
-                        <div className="absolute left-3.5 top-2 bottom-2 w-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
-                        
-                        {recentTransactions.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full gap-2" style={{ color: 'var(--text-muted)' }}>
-                                <span className="material-symbols-rounded text-3xl">swap_horiz</span>
-                                <span className="text-xs font-medium text-slate-400">No stock movements recorded</span>
+                    <div className="flex-1 overflow-y-auto scrollable flex flex-col gap-2">
+                        {!dbAlerts || dbAlerts.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-4" style={{ color: 'var(--text-muted)' }}>
+                                <span className="material-symbols-rounded text-3xl">task_alt</span>
+                                <span className="text-xs font-medium text-slate-400">No active branch compliance or temperature alerts logged.</span>
                             </div>
                         ) : (
-                            recentTransactions.map(log => {
-                                const typeColors = {
-                                    'Stock In': { color: '#34d399', icon: 'add_circle' },
-                                    'Stock Out': { color: '#60a5fa', icon: 'remove_circle' },
-                                    'Expired': { color: '#f87171', icon: 'event_busy' }
+                            dbAlerts.map(alert => {
+                                const alertColors = {
+                                    critical: 'rgba(239, 68, 68, 0.15)',
+                                    warning: 'rgba(245, 158, 11, 0.15)',
+                                    info: 'rgba(59, 130, 246, 0.15)'
                                 };
-                                const style = typeColors[log.transactionType] || { color: '#a78bfa', icon: 'published_with_changes' };
-                                const qty = log.quantityChanged;
+                                const alertBorders = {
+                                    critical: 'rgba(239, 68, 68, 0.4)',
+                                    warning: 'rgba(245, 158, 11, 0.4)',
+                                    info: 'rgba(59, 130, 246, 0.4)'
+                                };
+                                const textColors = {
+                                    critical: '#ef4444',
+                                    warning: '#f59e0b',
+                                    info: '#3b82f6'
+                                };
+                                const iconMap = {
+                                    Expiry: 'event_busy',
+                                    Stock: 'warning',
+                                    Health: 'trending_down',
+                                    General: 'info'
+                                };
 
                                 return (
-                                    <div key={log._id} className="relative pl-8 flex flex-col gap-1 cursor-pointer"
-                                        onClick={() => navigate(`/inventory/transaction/${log._id}`)}>
-                                        
-                                        {/* Timeline Dot */}
-                                        <div className="absolute left-1.5 top-0.5 w-4 h-4 rounded-md flex items-center justify-center"
-                                            style={{ background: 'rgba(15,20,32,0.8)', border: `1.5px solid ${style.color}` }}>
-                                            <span className="material-symbols-rounded text-[8px]" style={{ color: style.color }}>{style.icon}</span>
-                                        </div>
-
+                                    <div key={alert._id} 
+                                        className="p-2.5 rounded-lg border flex flex-col gap-1.5 transition-all duration-200"
+                                        style={{ 
+                                            background: alertColors[alert.severity] || 'rgba(255,255,255,0.02)',
+                                            borderColor: alertBorders[alert.severity] || 'rgba(255,255,255,0.05)'
+                                        }}>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-white truncate max-w-[130px]">
-                                                {log.medicineId?.name || 'Medication'}
-                                            </span>
-                                            <span className="text-[10px] font-bold font-serif" style={{ color: qty > 0 ? '#34d399' : qty < 0 ? '#f87171' : 'var(--text-muted)' }}>
-                                                {qty > 0 ? `+${qty}` : qty}
-                                            </span>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="material-symbols-rounded text-sm" style={{ color: textColors[alert.severity] }}>
+                                                    {iconMap[alert.alertType] || 'info'}
+                                                </span>
+                                                <span className="text-xs font-bold text-white">{alert.title}</span>
+                                            </div>
+                                            <button 
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    try {
+                                                        const res = await fetch(`/api/alerts/${alert._id}/read`, { method: 'PUT' });
+                                                        if (res.ok) fetchDashboard();
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                    }
+                                                }}
+                                                className="text-[9px] font-black text-white/40 hover:text-white bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded cursor-pointer transition-all"
+                                            >
+                                                Dismiss
+                                            </button>
                                         </div>
-                                        <div className="flex items-center justify-between text-[9px]" style={{ color: 'var(--text-muted)' }}>
-                                            <span>{log.transactionType} · {log.userId?.username || 'User'}</span>
-                                            <span>{new Date(log.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                        </div>
+                                        <p className="text-[10px] text-slate-300 font-medium leading-normal">
+                                            {alert.message}
+                                        </p>
                                     </div>
                                 );
                             })

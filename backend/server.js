@@ -8,12 +8,20 @@ import { protect } from './middleware/authMiddleware.js';
 import { login, logout, getMe } from './controllers/authController.js';
 import { getMedicines, getMedicineById, addMedicine, updateMedicine, getMedicineLogs } from './controllers/medicineController.js';
 import { postStockIn, postStockOut, postAdjustment, getHistory } from './controllers/inventoryController.js';
-import { getDashboardData } from './controllers/analyticsController.js';
+import { getDashboardData, getAdminBranchesComparison } from './controllers/analyticsController.js';
+import { getReorderQueue, createReorderRequest, completeReorderRequest } from './controllers/reorderController.js';
+import { getAlerts, markAlertAsRead } from './controllers/alertController.js';
+import { exportAuditTrailCSV } from './controllers/complianceController.js';
 
 // Load models for seeder
 import Pharmacy from './models/Pharmacy.js';
 import User from './models/User.js';
 import Medicine from './models/Medicine.js';
+import ReorderRequest from './models/ReorderRequest.js';
+import BranchHealthHistory from './models/BranchHealthHistory.js';
+import Alert from './models/Alert.js';
+import InventoryTransaction from './models/InventoryTransaction.js';
+import InventoryLog from './models/InventoryLog.js';
 
 dotenv.config();
 
@@ -66,7 +74,18 @@ app.post('/api/inventory/stock-in', protect, postStockIn);
 app.post('/api/inventory/stock-out', protect, postStockOut);
 app.post('/api/inventory/adjustment', protect, postAdjustment);
 app.get('/api/inventory/history', protect, getHistory);
+
 app.get('/api/analytics/dashboard', protect, getDashboardData);
+app.get('/api/analytics/admin/branches', protect, getAdminBranchesComparison);
+
+app.get('/api/reorders', protect, getReorderQueue);
+app.post('/api/reorders', protect, createReorderRequest);
+app.put('/api/reorders/:id/complete', protect, completeReorderRequest);
+
+app.get('/api/alerts', protect, getAlerts);
+app.put('/api/alerts/:id/read', protect, markAlertAsRead);
+
+app.get('/api/compliance/export', protect, exportAuditTrailCSV);
 
 // Debug Seeder Route (for Phase 1 Manual Verification)
 app.post('/api/debug/seed', async (req, res) => {
@@ -75,6 +94,11 @@ app.post('/api/debug/seed', async (req, res) => {
         await Pharmacy.deleteMany({});
         await User.deleteMany({});
         await Medicine.deleteMany({});
+        await ReorderRequest.deleteMany({});
+        await BranchHealthHistory.deleteMany({});
+        await Alert.deleteMany({});
+        await InventoryTransaction.deleteMany({});
+        await InventoryLog.deleteMany({});
 
         // 1. Create Pharmacies
         const pharmacyNorth = await Pharmacy.create({
@@ -110,66 +134,220 @@ app.post('/api/debug/seed', async (req, res) => {
         });
 
         // 3. Create Tenant Medicines
-        await Medicine.create([
+        const northMeds = await Medicine.create([
             {
-                name: 'Atorvastatin 20mg',
-                ndc: '00071-0156-40',
-                category: 'Cardiovascular',
-                stock: 1240,
-                price: 0.15,
-                supplier: 'Medline Industries',
+                name: 'Paracetamol 650mg',
+                ndc: 'CI-PAR-650',
+                category: 'Analgesic',
+                stock: 1200,
+                price: 15.00,
+                supplier: 'Cipla Ltd',
                 status: 'Active',
-                expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Healthy: expires in 1 year
-                pharmacyId: pharmacyNorth._id
+                reorderPoint: 100,
+                expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Healthy
+                pharmacyId: pharmacyNorth._id,
+                createdBy: pharmacistUser._id
             },
             {
                 name: 'Amoxicillin 500mg',
-                ndc: '00093-3109-05',
+                ndc: 'SP-AMO-500',
                 category: 'Anti-infective',
                 stock: 210,
-                price: 0.22,
-                supplier: 'McKesson Corp',
+                price: 45.50,
+                supplier: 'Sun Pharma',
                 status: 'Active',
-                expiryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // Expired: expired 5 days ago
-                pharmacyId: pharmacyNorth._id
+                reorderPoint: 50,
+                expiryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // Expired
+                pharmacyId: pharmacyNorth._id,
+                createdBy: pharmacistUser._id
             },
             {
-                name: 'Lisinopril 10mg',
-                ndc: '00378-0219-01',
-                category: 'Cardiovascular',
-                stock: 680,
-                price: 0.08,
-                supplier: 'Medline Industries',
-                status: 'Active',
-                expiryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // Near Expiry: expires in 10 days
-                pharmacyId: pharmacyDowntown._id
-            },
-            {
-                name: 'Metformin 1000mg',
-                ndc: '50090-2849-00',
+                name: 'Metformin 500mg',
+                ndc: 'AI-MET-500',
                 category: 'Endocrine',
-                stock: 135,
-                price: 0.12,
-                supplier: 'Cardinal Health',
-                status: 'Inactive',
-                expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), // Healthy: expires in 6 months
-                pharmacyId: pharmacyDowntown._id
+                stock: 12, // Low stock
+                price: 8.20,
+                supplier: 'Abbott India',
+                status: 'Active',
+                reorderPoint: 100,
+                expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000), // Healthy
+                pharmacyId: pharmacyNorth._id,
+                createdBy: pharmacistUser._id
             },
             {
-                name: 'Humalog Insulin 100 U/mL',
-                ndc: '00002-8290-01',
-                category: 'Emergency',
-                stock: 15,
-                price: 32.50,
-                supplier: 'Cardinal Health',
+                name: 'Amlodipine 5mg',
+                ndc: 'LL-AML-005',
+                category: 'Cardiovascular',
+                stock: 0, // Depleted
+                price: 12.00,
+                supplier: 'Lupin Ltd',
                 status: 'Active',
-                expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // Near Expiry / Low stock
-                pharmacyId: pharmacyDowntown._id
+                reorderPoint: 50,
+                expiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // Healthy
+                pharmacyId: pharmacyNorth._id,
+                createdBy: pharmacistUser._id
+            },
+            {
+                name: 'Pantoprazole 40mg',
+                ndc: 'AL-PAN-040',
+                category: 'Gastrointestinal',
+                stock: 5, // Low stock & near expiry
+                price: 22.50,
+                supplier: 'Alkem Laboratories',
+                status: 'Active',
+                reorderPoint: 30,
+                expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // Near Expiry
+                pharmacyId: pharmacyNorth._id,
+                createdBy: pharmacistUser._id
             }
         ]);
 
+        const downtownMeds = await Medicine.create([
+            {
+                name: 'Paracetamol 650mg',
+                ndc: 'CI-PAR-650',
+                category: 'Analgesic',
+                stock: 800,
+                price: 15.00,
+                supplier: 'Cipla Ltd',
+                status: 'Active',
+                reorderPoint: 100,
+                expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                pharmacyId: pharmacyDowntown._id,
+                createdBy: managerUser._id
+            },
+            {
+                name: 'Amoxicillin 500mg',
+                ndc: 'SP-AMO-500',
+                category: 'Anti-infective',
+                stock: 15, // Low stock & near expiry
+                price: 45.50,
+                supplier: 'Sun Pharma',
+                status: 'Active',
+                reorderPoint: 50,
+                expiryDate: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000),
+                pharmacyId: pharmacyDowntown._id,
+                createdBy: managerUser._id
+            },
+            {
+                name: 'Metformin 500mg',
+                ndc: 'AI-MET-500',
+                category: 'Endocrine',
+                stock: 900,
+                price: 8.20,
+                supplier: 'Abbott India',
+                status: 'Active',
+                reorderPoint: 100,
+                expiryDate: new Date(Date.now() + 240 * 24 * 60 * 60 * 1000),
+                pharmacyId: pharmacyDowntown._id,
+                createdBy: managerUser._id
+            },
+            {
+                name: 'Amlodipine 5mg',
+                ndc: 'LL-AML-005',
+                category: 'Cardiovascular',
+                stock: 60,
+                price: 12.00,
+                supplier: 'Lupin Ltd',
+                status: 'Active',
+                reorderPoint: 50,
+                expiryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // Near expiry
+                pharmacyId: pharmacyDowntown._id,
+                createdBy: managerUser._id
+            }
+        ]);
+
+        // 4. Create Historical health scores
+        await BranchHealthHistory.create([
+            { pharmacyId: pharmacyNorth._id, healthScore: 95, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+            { pharmacyId: pharmacyNorth._id, healthScore: 92, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+            { pharmacyId: pharmacyNorth._id, healthScore: 88, date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+            
+            { pharmacyId: pharmacyDowntown._id, healthScore: 90, date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+            { pharmacyId: pharmacyDowntown._id, healthScore: 85, date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+            { pharmacyId: pharmacyDowntown._id, healthScore: 80, date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) }
+        ]);
+
+        // 5. Create some seed alerts
+        await Alert.create([
+            {
+                pharmacyId: pharmacyNorth._id,
+                title: 'Audit Warning',
+                message: 'Monthly drugs check compliance audit sheet is pending completion.',
+                severity: 'warning',
+                alertType: 'General'
+            },
+            {
+                pharmacyId: pharmacyDowntown._id,
+                title: 'Low Temperature Alert',
+                message: 'Cold-chain storage refrigerator #2 temp warning logged.',
+                severity: 'critical',
+                alertType: 'General'
+            }
+        ]);
+
+        // 6. Create active reorder request
+        await ReorderRequest.create({
+            medicineId: northMeds[3]._id, // Amlodipine 5mg
+            pharmacyId: pharmacyNorth._id,
+            quantityNeeded: 100,
+            supplier: 'Lupin Ltd',
+            status: 'Ordered',
+            orderedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+            createdBy: pharmacistUser._id
+        });
+
+        // 7. Seed inventory movements for past week chart & audit logs
+        const days = 7;
+        const txs = [];
+
+        for (let i = 0; i < days; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            
+            // Northside stock movements
+            txs.push({
+                medicineId: northMeds[0]._id, // Paracetamol
+                pharmacyId: pharmacyNorth._id,
+                userId: pharmacistUser._id,
+                transactionType: 'Stock In',
+                quantityChanged: Math.floor(Math.random() * 80) + 20,
+                createdAt: date
+            });
+
+            txs.push({
+                medicineId: northMeds[0]._id,
+                pharmacyId: pharmacyNorth._id,
+                userId: pharmacistUser._id,
+                transactionType: 'Stock Out',
+                quantityChanged: -(Math.floor(Math.random() * 50) + 10),
+                createdAt: date
+            });
+
+            // Downtown stock movements
+            txs.push({
+                medicineId: downtownMeds[0]._id, // Paracetamol
+                pharmacyId: pharmacyDowntown._id,
+                userId: managerUser._id,
+                transactionType: 'Stock In',
+                quantityChanged: Math.floor(Math.random() * 60) + 15,
+                createdAt: date
+            });
+
+            txs.push({
+                medicineId: downtownMeds[0]._id,
+                pharmacyId: pharmacyDowntown._id,
+                userId: managerUser._id,
+                transactionType: 'Stock Out',
+                quantityChanged: -(Math.floor(Math.random() * 40) + 10),
+                createdAt: date
+            });
+        }
+
+        await InventoryTransaction.create(txs);
+
         res.json({
-            message: 'Database seeded successfully!',
+            message: 'Database seeded successfully with authentic Indian pharmaceutical data, alerts, reorders, and transactional activity!',
             pharmacies: [
                 { id: pharmacyNorth._id, name: pharmacyNorth.name },
                 { id: pharmacyDowntown._id, name: pharmacyDowntown.name }
