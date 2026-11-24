@@ -10,9 +10,15 @@ import PurchaseOrder from '../models/PurchaseOrder.js';
 export const getDashboardData = async (req, res) => {
     try {
         let pharmacyId = req.user.pharmacyId;
+        let isOverview = false;
         // Support admin branch context override
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
+        if (req.user.role === 'Admin') {
+            if (!req.query.branchId || req.query.branchId === 'all' || req.query.branchId === 'overview') {
+                pharmacyId = null;
+                isOverview = true;
+            } else {
+                pharmacyId = req.query.branchId;
+            }
         }
 
         const today = new Date();
@@ -22,11 +28,11 @@ export const getDashboardData = async (req, res) => {
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
         thirtyDaysFromNow.setHours(23, 59, 59, 999);
 
-        // Fetch all non-archived medicines for this tenant
-        const medicines = await Medicine.find({
-            pharmacyId,
-            status: { $ne: 'Archived' }
-        });
+        // Fetch all non-archived medicines for this tenant or chain-wide
+        const medFilter = { status: { $ne: 'Archived' } };
+        if (pharmacyId) medFilter.pharmacyId = pharmacyId;
+
+        const medicines = await Medicine.find(medFilter);
 
         // 1. Basic Stats
         let totalValuation = 0;
@@ -110,43 +116,48 @@ export const getDashboardData = async (req, res) => {
         healthScore = Math.max(0, healthScore);
 
         // ── Health Score Drop Check ──
-        // Find latest history entry before today
-        const latestHistory = await BranchHealthHistory.findOne({
-            pharmacyId,
-            date: { $lt: today }
-        }).sort({ date: -1 });
-
-        if (latestHistory && latestHistory.healthScore - healthScore >= 5) {
-            // Log a DB alert if we haven't today
-            const todayAlert = await Alert.findOne({
+        if (!isOverview && pharmacyId) {
+            // Find latest history entry before today
+            const latestHistory = await BranchHealthHistory.findOne({
                 pharmacyId,
-                alertType: 'Health',
-                createdAt: { $gte: today }
-            });
-            if (!todayAlert) {
-                await Alert.create({
+                date: { $lt: today }
+            }).sort({ date: -1 });
+
+            if (latestHistory && latestHistory.healthScore - healthScore >= 5) {
+                // Log a DB alert if we haven't today
+                const todayAlert = await Alert.findOne({
                     pharmacyId,
-                    title: 'Branch Health Score Drop Detected',
-                    message: `Inventory health score has dropped from ${latestHistory.healthScore} to ${healthScore}. Review low stock or expired medications immediately.`,
-                    severity: 'critical',
-                    alertType: 'Health'
+                    alertType: 'Health',
+                    createdAt: { $gte: today }
                 });
+                if (!todayAlert) {
+                    await Alert.create({
+                        pharmacyId,
+                        title: 'Branch Health Score Drop Detected',
+                        message: `Inventory health score has dropped from ${latestHistory.healthScore} to ${healthScore}. Review low stock or expired medications immediately.`,
+                        severity: 'critical',
+                        alertType: 'Health'
+                    });
+                }
             }
+
+            // Upsert today's branch health history
+            const startOfToday = new Date(today);
+            const endOfToday = new Date(today);
+            endOfToday.setHours(23, 59, 59, 999);
+
+            await BranchHealthHistory.findOneAndUpdate(
+                { pharmacyId, date: { $gte: startOfToday, $lte: endOfToday } },
+                { healthScore, date: new Date() },
+                { upsert: true, new: true }
+            );
         }
 
-        // Upsert today's branch health history
-        const startOfToday = new Date(today);
-        const endOfToday = new Date(today);
-        endOfToday.setHours(23, 59, 59, 999);
-
-        await BranchHealthHistory.findOneAndUpdate(
-            { pharmacyId, date: { $gte: startOfToday, $lte: endOfToday } },
-            { healthScore, date: new Date() },
-            { upsert: true, new: true }
-        );
+        // Filters for remaining models
+        const branchFilter = pharmacyId ? { pharmacyId } : {};
 
         // 2. Recent Transactions
-        const recentTransactions = await InventoryTransaction.find({ pharmacyId })
+        const recentTransactions = await InventoryTransaction.find(branchFilter)
             .populate('medicineId', 'name ndc category')
             .populate('userId', 'username')
             .sort({ createdAt: -1 })
@@ -169,7 +180,7 @@ export const getDashboardData = async (req, res) => {
         sevenDaysAgo.setHours(0, 0, 0, 0);
 
         const last7DaysTransactions = await InventoryTransaction.find({
-            pharmacyId,
+            ...branchFilter,
             createdAt: { $gte: sevenDaysAgo }
         }).sort({ createdAt: 1 });
 
@@ -206,12 +217,12 @@ export const getDashboardData = async (req, res) => {
         const dailyMovements = Object.values(dailyMovementsMap);
 
         // 5. Active Alerts from Database
-        const dbAlertsList = await Alert.find({ pharmacyId, isRead: false })
+        const dbAlertsList = await Alert.find({ ...branchFilter, isRead: false })
             .sort({ createdAt: -1 });
 
         // 6. Briefing Widget Summary
-        const pendingOrdersCount = await ReorderRequest.countDocuments({ pharmacyId, status: 'Ordered' });
-        const dailyTransactionsCount = await InventoryTransaction.countDocuments({ pharmacyId, createdAt: { $gte: today } });
+        const pendingOrdersCount = await ReorderRequest.countDocuments({ ...branchFilter, status: 'Ordered' });
+        const dailyTransactionsCount = await InventoryTransaction.countDocuments({ ...branchFilter, createdAt: { $gte: today } });
 
         const briefing = [
             `Branch health stands at ${healthScore}/100. Dead stock is ₹${deadStockValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at risk from expired medicines.`,
@@ -222,7 +233,7 @@ export const getDashboardData = async (req, res) => {
         // 7. Critical Action Center Data Calculations
         // 7.1 Pending/Delayed Supplier Orders (status is Ordered or In Transit, and expectedDeliveryDate is past today)
         const delayedOrders = await PurchaseOrder.find({
-            pharmacyId,
+            ...branchFilter,
             status: { $in: ['Ordered', 'In Transit'] },
             expectedDeliveryDate: { $lt: new Date() }
         }).populate('supplierId', 'name contactPerson phone email');
@@ -232,7 +243,7 @@ export const getDashboardData = async (req, res) => {
 
         // 7.2 Compliance Issues calculations
         const medicinesMissingInfo = await Medicine.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             status: { $ne: 'Archived' },
             $or: [
                 { ndc: { $in: [null, ''] } },
@@ -242,7 +253,7 @@ export const getDashboardData = async (req, res) => {
         });
 
         const medicinesMissingExpiry = await Medicine.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             status: { $ne: 'Archived' },
             expiryDate: { $exists: false }
         });
@@ -250,7 +261,7 @@ export const getDashboardData = async (req, res) => {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const transactionsMissingBatch = await InventoryTransaction.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             transactionType: 'Stock In',
             createdAt: { $gte: thirtyDaysAgo },
             $or: [
@@ -438,12 +449,12 @@ export const getAdminBranchesComparison = async (req, res) => {
 export const getDashboardPriorities = async (req, res) => {
     try {
         let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
-        }
-
-        if (!pharmacyId) {
-            return res.json({ priorities: [] });
+        if (req.user.role === 'Admin') {
+            if (!req.query.branchId || req.query.branchId === 'all' || req.query.branchId === 'overview') {
+                pharmacyId = null;
+            } else {
+                pharmacyId = req.query.branchId;
+            }
         }
 
         const today = new Date();
@@ -453,9 +464,11 @@ export const getDashboardPriorities = async (req, res) => {
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
         thirtyDaysFromNow.setHours(23, 59, 59, 999);
 
+        const branchFilter = pharmacyId ? { pharmacyId } : {};
+
         // 1. Medicines expiring within 30 days
         const expiringMeds = await Medicine.find({
-            pharmacyId,
+            ...branchFilter,
             status: { $ne: 'Archived' },
             stock: { $gt: 0 },
             expiryDate: { $lte: thirtyDaysFromNow }
@@ -465,13 +478,13 @@ export const getDashboardPriorities = async (req, res) => {
 
         // 2. Medicines below reorder point (currentStock <= reorderPoint)
         const lowStockCount = await Medicine.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             status: 'Active',
             $expr: { $lte: ["$stock", "$reorderPoint"] }
         });
 
         // 3. Branch health score calculation
-        const meds = await Medicine.find({ pharmacyId, status: { $ne: 'Archived' } });
+        const meds = await Medicine.find({ ...branchFilter, status: { $ne: 'Archived' } });
         let outOfStock = 0;
         let lowStock = 0;
         let expiredSKU = 0;
@@ -609,26 +622,22 @@ export const getDashboardHealthBreakdown = async (req, res) => {
     try {
         let pharmacyId = req.user.pharmacyId;
         // Support admin branch context override
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
-        }
-
-        if (!pharmacyId) {
-            return res.json({
-                score: 100,
-                baseline: 100,
-                deductions: [],
-                band: "excellent",
-                bandLabel: "Excellent — branch is healthy"
-            });
+        if (req.user.role === 'Admin') {
+            if (!req.query.branchId || req.query.branchId === 'all' || req.query.branchId === 'overview') {
+                pharmacyId = null;
+            } else {
+                pharmacyId = req.query.branchId;
+            }
         }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        const branchFilter = pharmacyId ? { pharmacyId } : {};
+
         // 1. Expired medicines (Compliance)
         const expiredCount = await Medicine.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             status: { $ne: 'Archived' },
             stock: { $gt: 0 },
             expiryDate: { $lt: today }
@@ -637,7 +646,7 @@ export const getDashboardHealthBreakdown = async (req, res) => {
 
         // 2. Out of stock medicines (Availability)
         const outOfStockCount = await Medicine.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             status: 'Active',
             stock: 0
         });
@@ -647,7 +656,7 @@ export const getDashboardHealthBreakdown = async (req, res) => {
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
         const nearExpiryCount = await Medicine.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             status: { $ne: 'Archived' },
             stock: { $gt: 0 },
             expiryDate: { $gte: today, $lte: thirtyDaysFromNow }
@@ -656,7 +665,7 @@ export const getDashboardHealthBreakdown = async (req, res) => {
 
         // 4. Low stock medicines
         const lowStockCount = await Medicine.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             status: 'Active',
             $expr: { $lte: ["$stock", "$reorderPoint"] }
         });
@@ -664,7 +673,7 @@ export const getDashboardHealthBreakdown = async (req, res) => {
 
         // 5. Unresolved alerts
         const alertCount = await Alert.countDocuments({
-            pharmacyId,
+            ...branchFilter,
             isRead: false
         });
         const alertPoints = Math.min(20, alertCount * 5);

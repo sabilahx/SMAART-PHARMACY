@@ -237,7 +237,7 @@ export default function ActionCenter() {
             priorityItems.push({
                 type: 'expiry-critical',
                 severity: 'critical',
-                title: `🔴 Expiry Risk: ${med.name}`,
+                title: `Expiry Risk: ${med.name}`,
                 problem: `${med.name} (${med.stock} units) ${days <= 0 ? 'has expired' : `expires in ${days} days (on ${expDate.toLocaleDateString()})`}.`,
                 impact: `Inventory loss value: ₹${val.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at risk.`,
                 recommendedAction: days <= 0 
@@ -265,7 +265,7 @@ export default function ActionCenter() {
             priorityItems.push({
                 type: 'expiry-warning',
                 severity: 'warning',
-                title: `🟠 Expiry Watch: ${med.name}`,
+                title: `Expiry Watch: ${med.name}`,
                 problem: `${med.name} (${med.stock} units) expires in ${days} days.`,
                 impact: `Potential loss of ₹${val.toLocaleString('en-IN', { maximumFractionDigits: 0 })} if unsold.`,
                 recommendedAction: "Discount stock by 50% to accelerate sales clearance.",
@@ -294,7 +294,7 @@ export default function ActionCenter() {
         priorityItems.push({
             type: 'low-stock',
             severity: 'warning',
-            title: `🟠 Low Stock Warning: ${med.name}`,
+            title: `Low Stock Warning: ${med.name}`,
             problem: `${med.name} stock level is ${med.stock} (safety reorder trigger is ${reorderLimit}).`,
             impact: "Out-of-stock risk is high. Leads to lost prescription revenue and patient complaints.",
             recommendedAction: `Procure ${needed} units immediately. Recommended supplier is ${med.supplier || 'assigned vendor'}.`,
@@ -312,19 +312,16 @@ export default function ActionCenter() {
     // 3. Alerts (unread)
     alerts.forEach(alert => {
         let severity = 'watch';
-        let prefix = '🟡';
         if (alert.severity === 'critical') {
             severity = 'critical';
-            prefix = '🔴';
         } else if (alert.severity === 'warning') {
             severity = 'warning';
-            prefix = '🟠';
         }
 
         priorityItems.push({
             type: 'system-alert',
             severity,
-            title: `${prefix} ${alert.title}`,
+            title: alert.title,
             problem: alert.message,
             impact: alert.title.includes('Health') 
                 ? "Deduction applied to pharmacy health score. Lowers organization rating." 

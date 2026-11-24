@@ -9,21 +9,26 @@ import Supplier from '../models/Supplier.js';
 export const getReorderQueue = async (req, res) => {
     try {
         let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
+        if (req.user.role === 'Admin') {
+            if (!req.query.branchId || req.query.branchId === 'all' || req.query.branchId === 'overview') {
+                pharmacyId = null;
+            } else {
+                pharmacyId = req.query.branchId;
+            }
         }
 
-        // Fetch all active/inactive medicines below reorderPoint, populating suppliers
-        const medicines = await Medicine.find({
-            pharmacyId,
-            status: { $ne: 'Archived' }
-        }).populate('primarySupplier alternateSupplier');
+        const medFilter = { status: { $ne: 'Archived' } };
+        const reqFilter = { status: { $in: ['Pending', 'Ordered'] } };
+        if (pharmacyId) {
+            medFilter.pharmacyId = pharmacyId;
+            reqFilter.pharmacyId = pharmacyId;
+        }
+
+        // Fetch all active medicines below reorderPoint, populating suppliers
+        const medicines = await Medicine.find(medFilter).populate('primarySupplier alternateSupplier pharmacyId');
 
         // Fetch all active reorder requests (not completed)
-        const activeRequests = await ReorderRequest.find({
-            pharmacyId,
-            status: { $in: ['Pending', 'Ordered'] }
-        }).populate({
+        const activeRequests = await ReorderRequest.find(reqFilter).populate({
             path: 'medicineId',
             populate: { path: 'primarySupplier' }
         });
@@ -167,23 +172,25 @@ export const generateDraftPO = async (req, res) => {
             return res.status(400).json({ message: 'Medicine ID, quantity, and supplier are required.' });
         }
 
-        let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
-        }
-
-        const supplier = await Supplier.findOne({ _id: supplierId, pharmacyId });
-        if (!supplier) {
-            return res.status(404).json({ message: 'Supplier not found.' });
-        }
-
-        const medicine = await Medicine.findOne({ _id: medicineId, pharmacyId });
+        const medicine = await Medicine.findById(medicineId);
         if (!medicine) {
             return res.status(404).json({ message: 'Medicine not found.' });
         }
 
+        let pharmacyId = req.user.pharmacyId || medicine.pharmacyId;
+        if (req.user.role === 'Admin' && req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
+            pharmacyId = req.query.branchId;
+        } else if (!pharmacyId) {
+            pharmacyId = medicine.pharmacyId;
+        }
+
+        const supplier = await Supplier.findById(supplierId);
+        if (!supplier) {
+            return res.status(404).json({ message: 'Supplier not found.' });
+        }
+
         // Calculate Cost
-        const unitCost = medicine.supplierCost || 0;
+        const unitCost = medicine.supplierCost || medicine.price || 0;
         const totalCost = Number(quantityNeeded) * unitCost;
 
         // Generate PO Number
@@ -196,10 +203,10 @@ export const generateDraftPO = async (req, res) => {
 
         const po = new PurchaseOrder({
             poNumber,
-            supplierId,
-            pharmacyId,
+            supplierId: supplier._id,
+            pharmacyId: medicine.pharmacyId || pharmacyId,
             medicines: [{
-                medicineId,
+                medicineId: medicine._id,
                 name: medicine.name,
                 quantity: Number(quantityNeeded),
                 unitCost,

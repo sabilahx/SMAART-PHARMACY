@@ -20,8 +20,13 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['Admin', 'Pharmacist', 'Manager'],
+        enum: ['Admin', 'Pharmacist', 'Manager', 'Supplier'],
         required: true
+    },
+    supplierId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Supplier',
+        required: false
     },
     fullName: {
         type: String,

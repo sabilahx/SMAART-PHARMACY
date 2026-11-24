@@ -180,7 +180,7 @@ export const getHistory = async (req, res) => {
 
         let pharmacyId = req.user.pharmacyId;
         if (req.user.role === 'Admin') {
-            if (branchId) {
+            if (branchId && branchId !== 'all' && branchId !== 'overview') {
                 query.pharmacyId = branchId;
             }
         } else {

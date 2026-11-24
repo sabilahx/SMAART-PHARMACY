@@ -130,10 +130,14 @@ export const getSuppliers = async (req, res) => {
     try {
         const { filter, search } = req.query;
         let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
+        const query = {};
+        if (req.user.role === 'Admin') {
+            if (req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
+                query.pharmacyId = req.query.branchId;
+            }
+        } else {
+            query.pharmacyId = pharmacyId;
         }
-        let query = { pharmacyId };
 
         if (filter === 'Active') {
             query.status = 'Active';
@@ -356,12 +360,17 @@ export const updateSupplier = async (req, res) => {
 export const getPurchaseOrders = async (req, res) => {
     try {
         let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
+        const query = {};
+        if (req.user.role === 'Admin') {
+            if (req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
+                query.pharmacyId = req.query.branchId;
+            }
+        } else {
+            query.pharmacyId = pharmacyId;
         }
-        const query = { pharmacyId };
         const orders = await PurchaseOrder.find(query)
             .populate('supplierId')
+            .populate('pharmacyId', 'name branchCode')
             .sort({ createdAt: -1 });
         res.json(orders);
     } catch (err) {

@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const inputStyle = {
-    background: 'rgba(255,255,255,0.03)',
-    border: 'none',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--card-border)',
     color: 'var(--text-primary)',
     caretColor: '#00B4D8',
 };
 
 const inputFocusStyle = {
-    background: 'rgba(255,255,255,0.04)',
+    background: 'var(--bg-secondary)',
+    borderColor: '#00B4D8',
     boxShadow: '0 0 0 1.5px rgba(0,194,204,0.35)',
 };
 
@@ -233,8 +234,7 @@ export default function InventoryTransactionForm() {
 
             {/* Transaction type selector segments */}
             <div
-                className="grid grid-cols-3 gap-2 p-1 rounded-lg backdrop-blur-md"
-                style={{ background: 'rgba(15,20,32,0.3)' }}
+                className="grid grid-cols-3 gap-2 p-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)]"
             >
                 {Object.entries(TAB_CONFIG).map(([key, cfg]) => {
                     const isActive = activeTab === key;
@@ -272,8 +272,8 @@ export default function InventoryTransactionForm() {
 
             {/* Unified compact single card container */}
             <div
-                className="rounded-xl p-5 border border-[var(--card-border)] backdrop-blur-xl flex flex-col gap-5 relative transition-all"
-                style={{ background: 'rgba(15,20,32,0.3)', boxShadow: `0 0 32px ${tabCfg.color}05` }}
+                className="rounded-2xl p-6 flex flex-col gap-5 relative transition-all premium-card shadow-elevated"
+                style={{ boxShadow: `0 0 32px ${tabCfg.color}15` }}
             >
                 {showConfirm ? (
                     <div className="flex flex-col items-center justify-center py-8 px-4 text-center gap-4 animate-fade-in">
@@ -336,9 +336,9 @@ export default function InventoryTransactionForm() {
                                 className="w-full px-3 py-2 rounded-lg text-xs outline-none transition-all duration-200 cursor-pointer"
                                 style={inputStyle}
                             >
-                                <option value="" style={{ background: '#0f1420' }}>— Select from active catalog —</option>
+                                <option value="" className="bg-[var(--bg-primary)] text-[var(--text-primary)]">— Select from active catalog —</option>
                                 {medicines.map(m => (
-                                    <option key={m._id} value={m._id} style={{ background: '#0f1420' }}>
+                                    <option key={m._id} value={m._id} className="bg-[var(--bg-primary)] text-[var(--text-primary)]">
                                         {m.name} · NDC: {m.ndc} · Current Stock: {m.stock}
                                     </option>
                                 ))}
@@ -348,8 +348,7 @@ export default function InventoryTransactionForm() {
                         {/* Projected stock preview (compact row) */}
                         {selectedMed && (
                             <div
-                                className="grid grid-cols-2 gap-4 p-3 rounded-lg border border-[var(--card-border)]"
-                                style={{ background: 'rgba(255,255,255,0.02)' }}
+                                className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-[var(--card-border)] bg-[var(--bg-secondary)]"
                             >
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">Current Stock</span>
@@ -404,10 +403,10 @@ export default function InventoryTransactionForm() {
                                     <FormField label="Reason for Dispensing">
                                         <select name="reason" value={formData.reason} onChange={handleInput}
                                             className={`${baseInputClass} cursor-pointer`} style={inputStyle}>
-                                            <option value="Dispensed" style={{ background: '#0f1420' }}>Dispensed (Prescription)</option>
-                                            <option value="Loss/Damage" style={{ background: '#0f1420' }}>Loss / Damage Adjustment</option>
-                                            <option value="Expired" style={{ background: '#0f1420' }}>Expired Stock Disposal</option>
-                                            <option value="Return to Supplier" style={{ background: '#0f1420' }}>Return to Supplier</option>
+                                            <option value="Dispensed" className="bg-[var(--bg-primary)] text-[var(--text-primary)]">Dispensed (Prescription)</option>
+                                            <option value="Loss/Damage" className="bg-[var(--bg-primary)] text-[var(--text-primary)]">Loss / Damage Adjustment</option>
+                                            <option value="Expired" className="bg-[var(--bg-primary)] text-[var(--text-primary)]">Expired Stock Disposal</option>
+                                            <option value="Return to Supplier" className="bg-[var(--bg-primary)] text-[var(--text-primary)]">Return to Supplier</option>
                                         </select>
                                     </FormField>
                                 </>
@@ -422,9 +421,9 @@ export default function InventoryTransactionForm() {
                                     <FormField label="Adjustment Type">
                                         <select name="adjustmentType" value={formData.adjustmentType} onChange={handleInput}
                                             className={`${baseInputClass} cursor-pointer`} style={inputStyle}>
-                                            <option value="Adjustment" style={{ background: '#0f1420' }}>Manual Correction</option>
-                                            <option value="Expired" style={{ background: '#0f1420' }}>Expired Waste</option>
-                                            <option value="Archived" style={{ background: '#0f1420' }}>Archived Record</option>
+                                            <option value="Adjustment" className="bg-[var(--bg-primary)] text-[var(--text-primary)]">Manual Correction</option>
+                                            <option value="Expired" className="bg-[var(--bg-primary)] text-[var(--text-primary)]">Expired Waste</option>
+                                            <option value="Archived" className="bg-[var(--bg-primary)] text-[var(--text-primary)]">Archived Record</option>
                                         </select>
                                     </FormField>
                                     <FormField label="Correction Reason" fullWidth>
@@ -457,10 +456,7 @@ export default function InventoryTransactionForm() {
                             <button
                                 type="button"
                                 onClick={() => navigate('/inventory/history')}
-                                className="px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200"
-                                style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)' }}
-                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                                className="px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 bg-[var(--bg-secondary)] hover:bg-[var(--table-row-hover)] text-[var(--text-secondary)] border border-[var(--card-border)]"
                             >
                                 Cancel
                             </button>

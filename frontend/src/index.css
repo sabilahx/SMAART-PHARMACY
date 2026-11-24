@@ -1,12 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
-
 @layer utilities {
   .font-playfair {
     font-family: 'Playfair Display', serif;
+  }
+  .font-sans-clean {
+    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 }
 
@@ -146,6 +149,16 @@
   .premium-card:hover {
     box-shadow: var(--card-shadow-hover);
     transform: translateY(-2px);
+  }
+
+  .premium-card-elevated {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow-hover);
+    @apply transition-all duration-300;
+    border-radius: 20px;
+    position: relative;
   }
 
   /* Colored top accent for cards */

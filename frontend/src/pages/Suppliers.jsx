@@ -87,21 +87,7 @@ export default function Suppliers() {
         }
     };
 
-    // Modals
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [isEditOpen, setIsEditOpen] = useState(false);
-    const [selectedSupplier, setSelectedSupplier] = useState(null);
-
-    // Form Fields
-    const [name, setName] = useState('');
-    const [contactPerson, setContactPerson] = useState('');
-    const [phone, setPhone] = useState('');
-    const [email, setEmail] = useState('');
-    const [address, setAddress] = useState('');
-    const [gstNumber, setGstNumber] = useState('');
-    const [status, setStatus] = useState('Active');
-    const [formError, setFormError] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+    // No local form fields needed for create/edit modals
 
     // Fetch Supplier Data
     const fetchSuppliers = async () => {
@@ -171,85 +157,7 @@ export default function Suppliers() {
         }
     }, [activeBranch, activeTab]);
 
-    // Handle Create Supplier
-    const handleCreateSubmit = async (e) => {
-        e.preventDefault();
-        setFormError('');
-        if (!name || !contactPerson || !phone || !email || !address || !gstNumber) {
-            setFormError('All fields are required.');
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            const res = await fetch('/api/suppliers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, contactPerson, phone, email, address, gstNumber })
-            });
-
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.message || 'Failed to create supplier.');
-            }
-
-            setIsCreateOpen(false);
-            resetForm();
-            fetchSuppliers();
-            fetchAnalytics();
-        } catch (err) {
-            setFormError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // Handle Open Edit Modal
-    const handleEditClick = (supplier) => {
-        setSelectedSupplier(supplier);
-        setName(supplier.name);
-        setContactPerson(supplier.contactPerson);
-        setPhone(supplier.phone);
-        setEmail(supplier.email);
-        setAddress(supplier.address);
-        setGstNumber(supplier.gstNumber);
-        setStatus(supplier.status);
-        setIsEditOpen(true);
-    };
-
-    // Handle Update Supplier
-    const handleEditSubmit = async (e) => {
-        e.preventDefault();
-        setFormError('');
-        if (!name || !contactPerson || !phone || !email || !address || !gstNumber) {
-            setFormError('All fields are required.');
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            const res = await fetch(`/api/suppliers/${selectedSupplier._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, contactPerson, phone, email, address, gstNumber, status })
-            });
-
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.message || 'Failed to update supplier.');
-            }
-
-            setIsEditOpen(false);
-            setSelectedSupplier(null);
-            resetForm();
-            fetchSuppliers();
-            fetchAnalytics();
-        } catch (err) {
-            setFormError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
+    // Removed handleCreateSubmit, handleEditSubmit, and handleEditClick as they are on dedicated pages
 
     // Handle Disable / Enable Supplier Toggle
     const handleToggleStatus = async (supplier) => {
@@ -289,16 +197,7 @@ export default function Suppliers() {
         }
     };
 
-    const resetForm = () => {
-        setName('');
-        setContactPerson('');
-        setPhone('');
-        setEmail('');
-        setAddress('');
-        setGstNumber('');
-        setStatus('Active');
-        setFormError('');
-    };
+    // Form reset removed as it's no longer used here
 
     // Derived statistics calculations (KPI Cards)
     const totalSuppliersCount = suppliers.length;
@@ -525,14 +424,14 @@ export default function Suppliers() {
                                     <tbody>
                                         {suppliers.map((sup) => {
                                             // Health Score Color
-                                            let healthCol = 'text-emerald-400 bg-emerald-500/10';
-                                            let healthIndicator = '🟢 Excellent';
+                                            let healthCol = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+                                            let healthIndicator = 'Excellent';
                                             if (sup.healthScore < 50) {
-                                                healthCol = 'text-red-400 bg-red-500/10';
-                                                healthIndicator = '🔴 Poor';
+                                                healthCol = 'text-red-400 bg-red-500/10 border-red-500/20';
+                                                healthIndicator = 'Poor';
                                             } else if (sup.healthScore < 80) {
-                                                healthCol = 'text-amber-400 bg-amber-500/10';
-                                                healthIndicator = '🟡 Average';
+                                                healthCol = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+                                                healthIndicator = 'Average';
                                             }
 
                                             return (
@@ -585,7 +484,7 @@ export default function Suppliers() {
                                                             {user?.role === 'Admin' && (
                                                                 <>
                                                                     <button 
-                                                                        onClick={() => handleEditClick(sup)}
+                                                                        onClick={() => navigate(`/suppliers/edit/${sup._id}`)}
                                                                         className="p-1 rounded bg-[#00B4D8]/10 hover:bg-[#00B4D8]/20 text-[#00B4D8] cursor-pointer"
                                                                         title="Edit"
                                                                     >
@@ -622,228 +521,6 @@ export default function Suppliers() {
                         </div>
                     </div>
                 </>
-            )}
-
-
-
-            {/* Create Supplier Modal */}
-            {isCreateOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--card-bg)]/60 backdrop-blur-md px-4">
-                    <div className="w-full max-w-lg rounded-2xl p-6 premium-card-elevated border border-[var(--card-border)] shadow-2xl relative animate-slide-up">
-                        
-                        <button 
-                            onClick={() => setIsCreateOpen(false)}
-                            className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-                        >
-                            <span className="material-symbols-rounded">close</span>
-                        </button>
-
-                        <div className="flex items-center gap-2 mb-5">
-                            <span className="material-symbols-rounded text-cyan-400 text-lg">register</span>
-                            <h3 className="text-lg font-bold text-[var(--text-primary)] font-serif">Register New Supplier Branch</h3>
-                        </div>
-
-                        {formError && (
-                            <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold mb-4">
-                                {formError}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Supplier Name</label>
-                                    <input 
-                                        type="text" required placeholder="E.g., Cipla Distributors"
-                                        value={name} onChange={(e) => setName(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Contact Person</label>
-                                    <input 
-                                        type="text" required placeholder="Full Name"
-                                        value={contactPerson} onChange={(e) => setContactPerson(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Phone Number</label>
-                                    <input 
-                                        type="text" required placeholder="E.g., +91 99887 76655"
-                                        value={phone} onChange={(e) => setPhone(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Email Address</label>
-                                    <input 
-                                        type="email" required placeholder="Email"
-                                        value={email} onChange={(e) => setEmail(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">GST Registration No.</label>
-                                    <input 
-                                        type="text" required placeholder="15-digit GSTIN"
-                                        value={gstNumber} onChange={(e) => setGstNumber(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Status</label>
-                                    <input 
-                                        type="text" readOnly value="Active"
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)]/50 outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Office Address</label>
-                                <textarea 
-                                    required rows="3" placeholder="Full Postal Address"
-                                    value={address} onChange={(e) => setAddress(e.target.value)}
-                                    className="px-3.5 py-2.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50 resize-none"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-3 mt-2">
-                                <button 
-                                    type="button" onClick={() => setIsCreateOpen(false)}
-                                    className="flex-1 py-2.5 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--card-bg)]/10 text-xs font-bold text-[var(--text-secondary)] border border-[var(--card-border)] cursor-pointer transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit" disabled={submitting}
-                                    className="flex-1 py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-[var(--text-primary)] text-xs font-black cursor-pointer shadow-lg transition-all disabled:opacity-50"
-                                >
-                                    {submitting ? 'Registering...' : 'Register'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Edit Supplier Modal */}
-            {isEditOpen && selectedSupplier && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--card-bg)]/60 backdrop-blur-md px-4">
-                    <div className="w-full max-w-lg rounded-2xl p-6 premium-card-elevated border border-[var(--card-border)] shadow-2xl relative animate-slide-up">
-                        
-                        <button 
-                            onClick={() => { setIsEditOpen(false); setSelectedSupplier(null); }}
-                            className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-                        >
-                            <span className="material-symbols-rounded">close</span>
-                        </button>
-
-                        <div className="flex items-center gap-2 mb-5">
-                            <span className="material-symbols-rounded text-cyan-400 text-lg">edit</span>
-                            <h3 className="text-lg font-bold text-[var(--text-primary)] font-serif">Modify Supplier Records</h3>
-                        </div>
-
-                        {formError && (
-                            <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold mb-4">
-                                {formError}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Supplier Name</label>
-                                    <input 
-                                        type="text" required
-                                        value={name} onChange={(e) => setName(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Contact Person</label>
-                                    <input 
-                                        type="text" required
-                                        value={contactPerson} onChange={(e) => setContactPerson(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Phone Number</label>
-                                    <input 
-                                        type="text" required
-                                        value={phone} onChange={(e) => setPhone(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Email Address</label>
-                                    <input 
-                                        type="email" required
-                                        value={email} onChange={(e) => setEmail(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">GST Registration No.</label>
-                                    <input 
-                                        type="text" required
-                                        value={gstNumber} onChange={(e) => setGstNumber(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Status</label>
-                                    <select 
-                                        value={status} onChange={(e) => setStatus(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    >
-                                        <option value="Active">Active</option>
-                                        <option value="Inactive">Inactive</option>
-                                        <option value="Archived">Archived</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Office Address</label>
-                                <textarea 
-                                    required rows="3"
-                                    value={address} onChange={(e) => setAddress(e.target.value)}
-                                    className="px-3.5 py-2.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50 resize-none"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-3 mt-2">
-                                <button 
-                                    type="button" onClick={() => { setIsEditOpen(false); setSelectedSupplier(null); }}
-                                    className="flex-1 py-2.5 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--card-bg)]/10 text-xs font-bold text-[var(--text-secondary)] border border-[var(--card-border)] cursor-pointer transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit" disabled={submitting}
-                                    className="flex-1 py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-[var(--text-primary)] text-xs font-black cursor-pointer shadow-lg transition-all disabled:opacity-50"
-                                >
-                                    {submitting ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
             )}
 
             {/* Low Stock Procurement Workflow Tab View */}

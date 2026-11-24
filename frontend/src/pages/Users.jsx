@@ -24,25 +24,10 @@ export default function Users() {
     const [statusFilter, setStatusFilter] = useState('All');
 
     // Modal states
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [isEditOpen, setIsEditOpen] = useState(false);
     const [isResetOpen, setIsResetOpen] = useState(false);
     
     const [selectedUser, setSelectedUser] = useState(null);
 
-    // Form inputs
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [fullName, setFullName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [email, setEmail] = useState('');
-    const [qualification, setQualification] = useState('');
-    const [registrationNumber, setRegistrationNumber] = useState('');
-    const [shiftType, setShiftType] = useState('Day');
-    const [role, setRole] = useState('Pharmacist');
-    const [pharmacyId, setPharmacyId] = useState('');
-    const [status, setStatus] = useState('Active');
-    
     const [newPassword, setNewPassword] = useState('');
     const [formError, setFormError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -91,63 +76,7 @@ export default function Users() {
         }
     }, [user, navigate]);
 
-    // Handle Create User Submission
-    const handleCreateSubmit = async (e) => {
-        e.preventDefault();
-        setFormError('');
-        if (!username.trim() || !password.trim() || !role || !pharmacyId) {
-            setFormError('Username, password, role, and branch assignment are required.');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const res = await fetch('/api/admin/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password, fullName, phone, email, qualification, registrationNumber, shiftType, role, pharmacyId, status })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Failed to create user account.');
-            }
-            setIsCreateOpen(false);
-            resetForm();
-            fetchData();
-        } catch (err) {
-            setFormError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // Handle Edit User Submission
-    const handleEditSubmit = async (e) => {
-        e.preventDefault();
-        setFormError('');
-        if (!username.trim() || !role || !pharmacyId) {
-            setFormError('Username, role, and branch assignment are required.');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const res = await fetch(`/api/admin/users/${selectedUser._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, fullName, phone, email, qualification, registrationNumber, shiftType, role, pharmacyId, status })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Failed to update user account.');
-            }
-            setIsEditOpen(false);
-            resetForm();
-            fetchData();
-        } catch (err) {
-            setFormError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
+    // Removed handleCreateSubmit and handleEditSubmit (moved to AddUser/EditUser)
 
     // Handle Password Reset Submission
     const handleResetSubmit = async (e) => {
@@ -208,36 +137,6 @@ export default function Users() {
         }
     };
 
-    const resetForm = () => {
-        setUsername('');
-        setPassword('');
-        setFullName('');
-        setPhone('');
-        setEmail('');
-        setQualification('');
-        setRegistrationNumber('');
-        setShiftType('Day');
-        setRole('Pharmacist');
-        setPharmacyId(pharmacies[0]?._id || '');
-        setStatus('Active');
-        setFormError('');
-        setSelectedUser(null);
-    };
-
-    const openEdit = (u) => {
-        setSelectedUser(u);
-        setUsername(u.username);
-        setFullName(u.fullName || '');
-        setPhone(u.phone || '');
-        setEmail(u.email || '');
-        setQualification(u.qualification || '');
-        setRegistrationNumber(u.registrationNumber || '');
-        setShiftType(u.shiftType || 'Day');
-        setRole(u.role || 'Pharmacist');
-        setPharmacyId(u.pharmacyId?._id || u.pharmacyId || '');
-        setStatus(u.status || 'Active');
-        setIsEditOpen(true);
-    };
 
     const openReset = (u) => {
         setSelectedUser(u);
@@ -310,10 +209,7 @@ export default function Users() {
                     </p>
                 </div>
                 <button
-                    onClick={() => {
-                        resetForm();
-                        setIsCreateOpen(true);
-                    }}
+                    onClick={() => navigate('/users/add')}
                     className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-slate-950 hover:bg-cyan-300"
                     style={{
                         background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)',
@@ -429,6 +325,7 @@ export default function Users() {
                             <option value="Admin">Admin</option>
                             <option value="Manager">Manager</option>
                             <option value="Pharmacist">Pharmacist</option>
+                            <option value="Supplier">Supplier</option>
                         </select>
                     </div>
 
@@ -474,6 +371,8 @@ export default function Users() {
                                         ? 'text-cyan-400 bg-cyan-500/10'
                                         : u.role === 'Manager'
                                         ? 'text-violet-400 bg-violet-500/10'
+                                        : u.role === 'Supplier'
+                                        ? 'text-amber-400 bg-amber-500/10'
                                         : 'text-teal-400 bg-teal-500/10';
 
                                     const statusColor = u.status === 'Active'
@@ -512,7 +411,7 @@ export default function Users() {
                                                 </span>
                                             </td>
                                             <td className="p-4 text-[var(--text-secondary)] font-serif font-bold">
-                                                {u.pharmacyId?.name || 'Unassigned'}
+                                                {u.supplierId?.name ? `(Supplier) ${u.supplierId.name}` : u.pharmacyId?.name || 'Unassigned'}
                                             </td>
                                             <td className="p-4 text-center">
                                                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-black tracking-wider uppercase ${statusColor}`}>
@@ -532,7 +431,7 @@ export default function Users() {
                                                         <span className="material-symbols-rounded text-sm">visibility</span>
                                                     </button>
                                                     <button
-                                                        onClick={() => openEdit(u)}
+                                                        onClick={() => navigate(`/users/edit/${u._id}`)}
                                                         className="p-1.5 rounded bg-[#00B4D8]/10 border border-[#00B4D8]/20 text-[#00B4D8] hover:bg-[#00B4D8]/20 cursor-pointer"
                                                         title="Edit user details"
                                                     >
@@ -569,308 +468,6 @@ export default function Users() {
                 </div>
             </div>
 
-            {/* Create User Modal */}
-            {isCreateOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--card-bg)]/60 backdrop-blur-sm overflow-y-auto">
-                    <div className="w-full max-w-md rounded-2xl overflow-hidden premium-card-elevated border border-[var(--card-border)] shadow-2xl p-6 relative my-8">
-                        <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
-                            <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Create User Account</h3>
-                            <button onClick={() => setIsCreateOpen(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"><span className="material-symbols-rounded">close</span></button>
-                        </div>
-                        {formError && (
-                            <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold font-mono">
-                                {formError}
-                            </div>
-                        )}
-                        <form onSubmit={handleCreateSubmit} className="mt-4 flex flex-col gap-3">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Username *</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Username"
-                                        value={username}
-                                        onChange={e => setUsername(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Password *</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Password"
-                                        value={password}
-                                        onChange={e => setPassword(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Full Name</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter full name"
-                                    value={fullName}
-                                    onChange={e => setFullName(e.target.value)}
-                                    className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Contact Phone</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Phone number"
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Contact Email</label>
-                                    <input
-                                        type="email"
-                                        placeholder="user@smaartpharmacy.in"
-                                        value={email}
-                                        onChange={e => setEmail(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Council Reg ID</label>
-                                    <input
-                                        type="text"
-                                        placeholder="State Council ID"
-                                        value={registrationNumber}
-                                        onChange={e => setRegistrationNumber(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Qualification</label>
-                                    <select
-                                        value={qualification}
-                                        onChange={e => setQualification(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="">-- Select Qualification --</option>
-                                        <option value="D.Pharm">D.Pharm</option>
-                                        <option value="B.Pharm">B.Pharm</option>
-                                        <option value="M.Pharm">M.Pharm</option>
-                                        <option value="Pharm.D">Pharm.D</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">User Role *</label>
-                                    <select
-                                        value={role}
-                                        onChange={e => setRole(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Pharmacist">Pharmacist</option>
-                                        <option value="Manager">Manager</option>
-                                        <option value="Admin">Admin</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Shift Assignment</label>
-                                    <select
-                                        value={shiftType}
-                                        onChange={e => setShiftType(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Day">Day Shift</option>
-                                        <option value="Night">Night Shift</option>
-                                        <option value="Rotational">Rotational</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Assign Branch *</label>
-                                    <select
-                                        value={pharmacyId}
-                                        onChange={e => setPharmacyId(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-serif font-bold"
-                                    >
-                                        <option value="">-- Branch --</option>
-                                        {pharmacies.map(p => (
-                                            <option key={p._id} value={p._id}>{p.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Status</label>
-                                    <select
-                                        value={status}
-                                        onChange={e => setStatus(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Active">Active</option>
-                                        <option value="Inactive">Inactive</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-950 transition-all duration-200 cursor-pointer disabled:opacity-50"
-                                style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)' }}
-                            >
-                                {submitting ? 'Provisioning user…' : 'Create User'}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Edit User Modal */}
-            {isEditOpen && selectedUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--card-bg)]/60 backdrop-blur-sm overflow-y-auto">
-                    <div className="w-full max-w-md rounded-2xl overflow-hidden premium-card-elevated border border-[var(--card-border)] shadow-2xl p-6 relative my-8">
-                        <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
-                            <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Edit User Account</h3>
-                            <button onClick={() => setIsEditOpen(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"><span className="material-symbols-rounded">close</span></button>
-                        </div>
-                        {formError && (
-                            <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold font-mono">
-                                {formError}
-                            </div>
-                        )}
-                        <form onSubmit={handleEditSubmit} className="mt-4 flex flex-col gap-3">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Username *</label>
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={e => setUsername(e.target.value)}
-                                    className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                />
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Full Name</label>
-                                <input
-                                    type="text"
-                                    value={fullName}
-                                    onChange={e => setFullName(e.target.value)}
-                                    className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Phone Contact</label>
-                                    <input
-                                        type="text"
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Contact Email</label>
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={e => setEmail(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Council Reg ID</label>
-                                    <input
-                                        type="text"
-                                        value={registrationNumber}
-                                        onChange={e => setRegistrationNumber(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Qualification</label>
-                                    <select
-                                        value={qualification}
-                                        onChange={e => setQualification(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="">-- Qualification --</option>
-                                        <option value="D.Pharm">D.Pharm</option>
-                                        <option value="B.Pharm">B.Pharm</option>
-                                        <option value="M.Pharm">M.Pharm</option>
-                                        <option value="Pharm.D">Pharm.D</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">User Role *</label>
-                                    <select
-                                        value={role}
-                                        onChange={e => setRole(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Pharmacist">Pharmacist</option>
-                                        <option value="Manager">Manager</option>
-                                        <option value="Admin">Admin</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Shift Assignment</label>
-                                    <select
-                                        value={shiftType}
-                                        onChange={e => setShiftType(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Day">Day Shift</option>
-                                        <option value="Night">Night Shift</option>
-                                        <option value="Rotational">Rotational</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Assign Branch *</label>
-                                    <select
-                                        value={pharmacyId}
-                                        onChange={e => setPharmacyId(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-serif font-bold"
-                                    >
-                                        <option value="">-- Branch --</option>
-                                        {pharmacies.map(p => (
-                                            <option key={p._id} value={p._id}>{p.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Status</label>
-                                    <select
-                                        value={status}
-                                        onChange={e => setStatus(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Active">Active</option>
-                                        <option value="Inactive">Inactive</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-950 transition-all duration-200 cursor-pointer disabled:opacity-50"
-                                style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)' }}
-                            >
-                                {submitting ? 'Saving changes…' : 'Save Changes'}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
 
             {/* Reset Password Modal */}
             {isResetOpen && selectedUser && (

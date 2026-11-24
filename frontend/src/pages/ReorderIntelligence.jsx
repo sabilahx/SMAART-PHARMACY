@@ -20,7 +20,10 @@ export default function ReorderIntelligence() {
         setError(null);
         try {
             // Fetch reorder queue
-            const url = activeBranch ? `/api/reorders?branchId=${activeBranch.id}` : '/api/reorders';
+            const branchParam = (activeBranch && activeBranch.id && activeBranch.id !== 'all') 
+                ? `?branchId=${activeBranch.id}` 
+                : '?branchId=all';
+            const url = `/api/reorders${branchParam}`;
             const res = await fetch(url);
             if (!res.ok) {
                 throw new Error('Failed to retrieve reorder intelligence queue.');
@@ -30,7 +33,7 @@ export default function ReorderIntelligence() {
             setActiveOrders(data.activeRequests || []);
 
             // Fetch suppliers for fallback/assignment
-            const supRes = await fetch('/api/suppliers?filter=Active');
+            const supRes = await fetch(`/api/suppliers?filter=Active${activeBranch?.id && activeBranch.id !== 'all' ? `&branchId=${activeBranch.id}` : ''}`);
             if (supRes.ok) {
                 const supData = await supRes.json();
                 setSuppliers(supData);
@@ -124,7 +127,7 @@ export default function ReorderIntelligence() {
                         <div className="absolute inset-0 animate-shimmer" />
                         <div className="w-48 h-5 rounded bg-[var(--bg-secondary)] mb-2" />
                         {Array.from({ length: 4 }).map((_, idx) => (
-                            <div key={idx} className="p-3.5 rounded-lg border border-[var(--card-border)] bg-[var(--bg-secondary)] flex items-center justify-between">
+                            <div key={idx} className="p-3.5 rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] flex items-center justify-between">
                                 <div className="flex flex-col gap-2 flex-1 pr-4">
                                     <div className="w-1/3 h-4 rounded bg-[var(--bg-secondary)]" />
                                     <div className="w-1/2 h-3.5 rounded bg-[var(--bg-secondary)]" />
@@ -198,7 +201,7 @@ export default function ReorderIntelligence() {
                             queue.map((item, idx) => {
                                 const preferredSup = item.medicineId.primarySupplier;
                                 return (
-                                    <div key={idx} className="p-3.5 rounded-lg border border-[var(--card-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-secondary)] flex items-center justify-between transition-all">
+                                    <div key={idx} className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--table-row-hover)] flex items-center justify-between transition-all premium-card shadow-sm">
                                         <div className="flex flex-col min-w-0 gap-1">
                                             <span className="text-xs font-bold text-[var(--text-primary)] truncate">{item.medicineId.name}</span>
                                             
@@ -209,7 +212,7 @@ export default function ReorderIntelligence() {
                                                     <span>Recommended Supplier: {preferredSup.name || preferredSup}</span>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-secondary)] bg-[var(--bg-secondary)]0/10 px-2 py-0.5 rounded self-start mt-0.5">
+                                                <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-secondary)] bg-[var(--table-row-hover)] px-2 py-0.5 rounded self-start mt-0.5">
                                                     <span className="material-symbols-rounded text-xs">warning</span>
                                                     <span>No primary supplier assigned</span>
                                                 </div>
@@ -252,7 +255,7 @@ export default function ReorderIntelligence() {
                             </div>
                         ) : (
                             activeOrders.map((order) => (
-                                <div key={order._id} className="p-3 rounded-lg border border-amber-500/10 bg-amber-500/[0.01] hover:bg-amber-500/[0.02] flex flex-col gap-3 transition-all">
+                                <div key={order._id} className="p-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--table-row-hover)] flex flex-col gap-3 transition-all premium-card shadow-sm">
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-xs font-bold text-[var(--text-primary)] truncate">{order.medicineId?.name || 'Medication'}</span>
@@ -306,7 +309,7 @@ export default function ReorderIntelligence() {
                                     type="text" 
                                     readOnly 
                                     value={selectedMed.name} 
-                                    className="px-3.5 py-2.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)]/60 outline-none"
+                                    className="px-3.5 py-2.5 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] text-xs text-[var(--text-primary)]/60 outline-none"
                                 />
                             </div>
 
@@ -318,7 +321,7 @@ export default function ReorderIntelligence() {
                                     min="1"
                                     value={orderQty} 
                                     onChange={(e) => setOrderQty(e.target.value)}
-                                    className="px-3.5 py-2.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
+                                    className="px-3.5 py-2.5 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
                                 />
                             </div>
 
@@ -338,7 +341,7 @@ export default function ReorderIntelligence() {
                                                     className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-2 ${
                                                         isSelected 
                                                             ? 'border-cyan-400 bg-cyan-950/20 shadow-md shadow-cyan-400/5' 
-                                                            : 'border-[var(--card-border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-secondary)]'
+                                                            : 'border-[var(--card-border)] bg-[var(--card-bg)] hover:bg-[var(--table-row-hover)]'
                                                     }`}
                                                 >
                                                     <div className="flex items-center justify-between">
@@ -391,7 +394,7 @@ export default function ReorderIntelligence() {
                                 <button 
                                     type="button"
                                     onClick={() => setSelectedMed(null)}
-                                    className="flex-1 py-2.5 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--card-bg)]/10 text-xs font-bold text-[var(--text-secondary)] border border-[var(--card-border)] cursor-pointer transition-all"
+                                    className="flex-1 py-2.5 rounded-lg bg-[var(--card-bg)] hover:bg-[var(--table-row-hover)] text-xs font-bold text-[var(--text-secondary)] border border-[var(--card-border)] cursor-pointer transition-all"
                                 >
                                     Cancel
                                 </button>

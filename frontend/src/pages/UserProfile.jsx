@@ -18,7 +18,6 @@ export default function UserProfile() {
     const [activeTab, setActiveTab] = useState('activity');
 
     // Modal states
-    const [isEditOpen, setIsEditOpen] = useState(false);
     const [isResetOpen, setIsResetOpen] = useState(false);
     const [formError, setFormError] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -87,33 +86,6 @@ export default function UserProfile() {
             fetchProfileData();
         }
     }, [id, user]);
-
-    const handleEditSubmit = async (e) => {
-        e.preventDefault();
-        setFormError('');
-        if (!username.trim() || !role || !pharmacyId) {
-            setFormError('Username, role, and branch assignment are required.');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const res = await fetch(`/api/admin/users/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, fullName, phone, email, qualification, registrationNumber, shiftType, role, pharmacyId, status })
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message || 'Failed to update user account details.');
-            }
-            setIsEditOpen(false);
-            fetchProfileData();
-        } catch (err) {
-            setFormError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
 
     const handleResetSubmit = async (e) => {
         e.preventDefault();
@@ -230,7 +202,7 @@ export default function UserProfile() {
                     {user?.role === 'Admin' && (
                         <>
                             <button
-                                onClick={() => setIsEditOpen(true)}
+                                onClick={() => navigate(`/users/edit/${id}`)}
                                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#00B4D8]/10 border border-[#00B4D8]/20 text-[#00B4D8] hover:bg-[#00B4D8]/20 cursor-pointer transition-colors"
                             >
                                 <span className="material-symbols-rounded text-sm">edit</span>
@@ -422,157 +394,7 @@ export default function UserProfile() {
                 </div>
             </div>
 
-            {/* Edit User Modal */}
-            {isEditOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--card-bg)]/60 backdrop-blur-sm overflow-y-auto">
-                    <div className="w-full max-w-md rounded-2xl overflow-hidden premium-card-elevated border border-[var(--card-border)] shadow-2xl p-6 relative my-8 animate-fade-in">
-                        <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-3">
-                            <h3 className="text-base font-bold text-[var(--text-primary)] font-serif">Edit User Details</h3>
-                            <button onClick={() => setIsEditOpen(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer">
-                                <span className="material-symbols-rounded">close</span>
-                            </button>
-                        </div>
-                        {formError && (
-                            <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold font-mono">
-                                {formError}
-                            </div>
-                        )}
-                        <form onSubmit={handleEditSubmit} className="mt-4 flex flex-col gap-3">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Username *</label>
-                                    <input
-                                        type="text"
-                                        value={username}
-                                        onChange={e => setUsername(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Full Name</label>
-                                    <input
-                                        type="text"
-                                        value={fullName}
-                                        onChange={e => setFullName(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    />
-                                </div>
-                            </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Phone Number</label>
-                                    <input
-                                        type="text"
-                                        value={phone}
-                                        onChange={e => setPhone(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Email Address</label>
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={e => setEmail(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Qualification</label>
-                                    <select
-                                        value={qualification}
-                                        onChange={e => setQualification(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="">Unspecified</option>
-                                        <option value="D.Pharm">D.Pharm</option>
-                                        <option value="B.Pharm">B.Pharm</option>
-                                        <option value="M.Pharm">M.Pharm</option>
-                                        <option value="Pharm.D">Pharm.D</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Registration No.</label>
-                                    <input
-                                        type="text"
-                                        value={registrationNumber}
-                                        onChange={e => setRegistrationNumber(e.target.value)}
-                                        className="w-full px-3.5 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400 font-mono"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Assigned Role *</label>
-                                    <select
-                                        value={role}
-                                        onChange={e => setRole(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Pharmacist">Pharmacist</option>
-                                        <option value="Manager">Manager</option>
-                                        <option value="Admin">System Admin</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Assigned Branch *</label>
-                                    <select
-                                        value={pharmacyId}
-                                        onChange={e => setPharmacyId(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="">Choose Branch</option>
-                                        {branches.map(b => (
-                                            <option key={b._id} value={b._id}>{b.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Shift Type</label>
-                                    <select
-                                        value={shiftType}
-                                        onChange={e => setShiftType(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Day">Day Shift</option>
-                                        <option value="Night">Night Shift</option>
-                                        <option value="Rotational">Rotational</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)] font-sans">Account Status</label>
-                                    <select
-                                        value={status}
-                                        onChange={e => setStatus(e.target.value)}
-                                        className="w-full px-3 py-1.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] rounded-xl text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400"
-                                    >
-                                        <option value="Active">Active</option>
-                                        <option value="Inactive">Inactive</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="mt-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-950 hover:opacity-90 transition-all duration-200 cursor-pointer disabled:opacity-50"
-                                style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0099a8 100%)' }}
-                            >
-                                {submitting ? 'Saving changes…' : 'Save Changes'}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
 
             {/* Reset Password Modal */}
             {isResetOpen && (

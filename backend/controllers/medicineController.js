@@ -6,10 +6,14 @@ export const getMedicines = async (req, res) => {
     const { status, branchId } = req.query;
     try {
         let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && branchId) {
-            pharmacyId = branchId;
+        const query = {};
+        if (req.user.role === 'Admin') {
+            if (branchId && branchId !== 'all' && branchId !== 'overview') {
+                query.pharmacyId = branchId;
+            }
+        } else {
+            query.pharmacyId = pharmacyId;
         }
-        const query = { pharmacyId };
         
         if (status) {
             query.status = status;
@@ -18,7 +22,7 @@ export const getMedicines = async (req, res) => {
             query.status = { $in: ['Active', 'Inactive'] };
         }
 
-        const medicines = await Medicine.find(query).sort({ name: 1 });
+        const medicines = await Medicine.find(query).populate('pharmacyId', 'name branchCode').sort({ name: 1 });
         res.json(medicines);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -29,13 +33,14 @@ export const getMedicines = async (req, res) => {
 export const getMedicineById = async (req, res) => {
     try {
         let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
+        if (req.user.role === 'Admin' && req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
             pharmacyId = req.query.branchId;
+        } else if (req.user.role === 'Admin') {
+            pharmacyId = null;
         }
-        const medicine = await Medicine.findOne({
-            _id: req.params.id,
-            pharmacyId
-        });
+        const query = { _id: req.params.id };
+        if (pharmacyId) query.pharmacyId = pharmacyId;
+        const medicine = await Medicine.findOne(query);
         
         if (!medicine) {
             return res.status(404).json({ message: 'Medicine not found' });

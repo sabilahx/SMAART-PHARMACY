@@ -247,17 +247,16 @@ export default function Layout() {
     }, [user]);
 
     // ── RBAC Navigation Setup ──
-    const navItems = [
-        {
-            to: '/dashboard',
-            icon: 'dashboard',
-            label: 'Analytics Dashboard',
-            sublabel: 'Operational metrics',
-        }
-    ];
+    const navItems = [];
 
     if (user?.role === 'Admin') {
         navItems.push(
+            {
+                to: '/dashboard',
+                icon: 'dashboard',
+                label: 'Analytics Dashboard',
+                sublabel: 'Operational metrics',
+            },
             {
                 to: '/branch-comparison',
                 icon: 'compare_arrows',
@@ -322,6 +321,12 @@ export default function Layout() {
         );
     } else if (user?.role === 'Manager') {
         navItems.push(
+            {
+                to: '/dashboard',
+                icon: 'dashboard',
+                label: 'Analytics Dashboard',
+                sublabel: 'Operational metrics',
+            },
             {
                 to: `/pharmacies/${user?.pharmacy?.id || ''}`,
                 icon: 'storefront',
@@ -549,19 +554,55 @@ export default function Layout() {
                 />
 
                 {/* Logo */}
-                <div className={`flex items-center gap-3 px-5 py-4 relative ${collapsed ? 'justify-center px-0' : ''}`}>
-                    <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 shadow-soft"
-                        style={{ background: 'linear-gradient(135deg, #00B4D8 0%, #0891b2 100%)' }}
-                    >
-                        <span className="material-symbols-rounded text-[var(--text-primary)] text-lg font-medium" style={{ fontVariationSettings: "'FILL' 1" }}>
-                            medication
-                        </span>
+                <div className={`flex items-center gap-3 px-4 py-4 relative border-b border-[var(--card-border)]/50 ${collapsed ? 'justify-center px-0' : ''}`}>
+                    {/* Authentic Emblem matching user design: Medical Cross + Capsule + Leaf with Orbital Ring */}
+                    <div className="relative w-9 h-9 flex-shrink-0 flex items-center justify-center">
+                        <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible drop-shadow-[0_0_10px_rgba(0,207,234,0.4)]">
+                            {/* Orbital path */}
+                            <circle cx="50" cy="50" r="42" fill="none" stroke="url(#orbitGrad)" strokeWidth="2.5" strokeDasharray="160 80" className="opacity-80" />
+                            {/* Glowing Orbiting Nodes */}
+                            <circle cx="9" cy="46" r="3.5" fill="#00cfea" className="animate-pulse" />
+                            <circle cx="88" cy="28" r="3" fill="#10b981" />
+                            <circle cx="38" cy="91" r="2.5" fill="#00cfea" />
+                            {/* Medical Cross in gradient cyan */}
+                            <path d="M42 20 h16 v14 h14 v16 h-14 v14 h-16 v-14 h-14 v-16 h14 z" fill="url(#crossGrad)" rx="2" />
+                            {/* Capsule Pill (tilted) */}
+                            <g transform="rotate(-32 52 56)">
+                                <rect x="36" y="48" width="32" height="16" rx="8" fill="#00CFEA" stroke="#ffffff" strokeWidth="1.5" />
+                                <line x1="52" y1="48" x2="52" y2="64" stroke="#ffffff" strokeWidth="2" />
+                                <rect x="52" y="48" width="16" height="16" rx="8" fill="#0369a1" />
+                            </g>
+                            {/* Green Botanical Leaf */}
+                            <path d="M60 55 C76 44, 84 56, 82 72 C68 74, 55 65, 60 55 Z" fill="url(#leafGrad)" />
+                            <defs>
+                                <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#00CFEA" stopOpacity="0.9" />
+                                    <stop offset="50%" stopColor="#10B981" stopOpacity="0.5" />
+                                    <stop offset="100%" stopColor="#00CFEA" stopOpacity="0.1" />
+                                </linearGradient>
+                                <linearGradient id="crossGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#00d8f6" />
+                                    <stop offset="100%" stopColor="#0284c7" />
+                                </linearGradient>
+                                <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#34d399" />
+                                    <stop offset="100%" stopColor="#059669" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
                     </div>
                     {!collapsed && (
                         <div className="flex flex-col overflow-hidden">
-                            <span className="text-[15px] font-semibold tracking-tight leading-none font-sans" style={{ color: 'var(--text-primary)' }}>SMAART</span>
-                            <span className="text-xs font-medium tracking-wide mt-1 text-[var(--brand)] uppercase">Pharmacy</span>
+                            <div className="flex items-baseline tracking-tight font-black font-sans leading-none text-[19px]">
+                                <span className="text-white">SMAA</span>
+                                <span className="text-[#00CFEA]">RT</span>
+                            </div>
+                            <span className="text-[9px] font-bold tracking-[0.24em] text-slate-300 mt-1 uppercase leading-none">
+                                PHARMACY
+                            </span>
+                            <span className="text-[7px] font-semibold tracking-[0.14em] text-slate-400/80 uppercase mt-0.5 leading-none">
+                                MANAGEMENT SYSTEM
+                            </span>
                         </div>
                     )}
                 </div>
@@ -634,42 +675,6 @@ export default function Layout() {
 
                 {/* Bottom collapse toggle */}
                 <div className="p-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                    {/* User Card / Settings Corner */}
-                    {!collapsed ? (
-                        <button
-                            onClick={() => navigate(`/users/${user?.id}`)}
-                            className="w-full text-left rounded-xl p-3 mb-3 group hover:border-[#00B4D8]/40 hover:bg-[#00B4D8]/5 transition-all duration-300 border border-white/5 cursor-pointer relative block"
-                            style={{ background: 'rgba(255,255,255,0.03)' }}
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <div
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold transition-all group-hover:scale-105"
-                                    style={{ background: 'linear-gradient(135deg, #00B4D820, #007db830)', color: '#00B4D8', border: '1px solid rgba(0,194,204,0.2)' }}
-                                >
-                                    {user?.username?.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1">
-                                    <span className="text-xs font-semibold truncate text-[var(--text-primary)] group-hover:text-[#00e1f0] transition-colors">{user?.username}</span>
-                                    <span className="text-xs truncate capitalize text-[var(--text-muted)] group-hover:text-[var(--text-primary)]/80 transition-colors">{user?.role} Settings</span>
-                                </div>
-                                <span className="material-symbols-rounded text-xs text-[var(--text-primary)]/30 group-hover:text-[#00e1f0] transition-colors">
-                                    settings
-                                </span>
-                            </div>
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => navigate(`/users/${user?.id}`)}
-                            className="w-8 h-8 mx-auto rounded-lg flex items-center justify-center mb-3 group hover:border-[#00B4D8]/40 hover:bg-[#00B4D8]/5 transition-all duration-300 border border-white/5 cursor-pointer flex-shrink-0"
-                            style={{ background: 'rgba(255,255,255,0.03)' }}
-                            title="Profile & Settings"
-                        >
-                            <span className="material-symbols-rounded text-base text-[var(--text-muted)] group-hover:text-[#00e1f0] transition-colors">
-                                manage_accounts
-                            </span>
-                        </button>
-                    )}
-
                     <div className="flex flex-col gap-1.5">
                         <button
                             onClick={() => setCollapsed(!collapsed)}
@@ -805,26 +810,33 @@ export default function Layout() {
                         {/* Pharmacy name pill or Branch Switcher for Admin */}
                         {user?.role === 'Admin' && branches.length > 0 ? (
                             <div
-                                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold transition-all duration-300"
+                                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 shadow-sm"
                                 style={{ 
                                     background: 'var(--card-bg)', 
                                     border: '1px solid var(--card-border)', 
                                     color: 'var(--text-secondary)',
                                 }}
                             >
-                                <span className="material-symbols-rounded text-xs" style={{ color: 'var(--brand)' }}>storefront</span>
+                                <span className="material-symbols-rounded text-base flex-shrink-0" style={{ color: 'var(--brand)' }}>storefront</span>
                                 <select
-                                    value={activeBranch?.id || ''}
+                                    value={activeBranch?.id || 'all'}
                                     onChange={(e) => {
-                                        const selected = branches.find(b => b.pharmacyId === e.target.value);
-                                        if (selected) {
-                                            switchBranch(selected.pharmacyId, selected.name);
+                                        if (e.target.value === 'all') {
+                                            switchBranch('all', 'Overview Analytics');
+                                        } else {
+                                            const selected = branches.find(b => b.pharmacyId === e.target.value);
+                                            if (selected) {
+                                                switchBranch(selected.pharmacyId, selected.name);
+                                            }
                                         }
                                     }}
-                                    className="bg-transparent border-none outline-none text-[var(--text-primary)] font-medium cursor-pointer py-0.5 pr-0.5 text-xs"
+                                    className="bg-transparent border-none outline-none text-[var(--text-primary)] font-semibold cursor-pointer py-0.5 pr-1 text-xs sm:text-sm"
                                 >
+                                    <option value="all" className="bg-[var(--card-bg)] text-[var(--brand)] font-bold">
+                                        Overview Analytics (All Branches)
+                                    </option>
                                     {branches.map(b => (
-                                        <option key={b.pharmacyId} value={b.pharmacyId} className="bg-[var(--card-bg)] text-[var(--text-primary)]">
+                                        <option key={b.pharmacyId} value={b.pharmacyId} className="bg-[var(--card-bg)] text-[var(--text-primary)] font-normal">
                                             {b.name}
                                         </option>
                                     ))}
@@ -832,14 +844,14 @@ export default function Layout() {
                             </div>
                         ) : (
                             <div
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-300"
+                                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300"
                                 style={{ 
                                     background: 'var(--card-bg)', 
                                     border: '1px solid var(--card-border)', 
                                     color: 'var(--text-secondary)',
                                 }}
                             >
-                                <span className="material-symbols-rounded text-xs" style={{ color: 'var(--brand)' }}>storefront</span>
+                                <span className="material-symbols-rounded text-base" style={{ color: 'var(--brand)' }}>storefront</span>
                                 <span>{activeBranch?.name || user?.pharmacy?.name || 'Pharmacy'}</span>
                             </div>
                         )}

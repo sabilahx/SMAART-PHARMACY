@@ -305,7 +305,7 @@ export const archivePharmacyAdmin = async (req, res) => {
 
 export const getUsersAdmin = async (req, res) => {
     try {
-        const users = await User.find({}).populate('pharmacyId', 'name address').sort({ username: 1 });
+        const users = await User.find({}).populate('pharmacyId', 'name address').populate('supplierId', 'name').sort({ username: 1 });
         
         // Calculate KPIs
         const totalUsers = await User.countDocuments({});
@@ -335,7 +335,7 @@ export const getUsersAdmin = async (req, res) => {
 };
 
 export const createUserAdmin = async (req, res) => {
-    const { username, password, fullName, phone, email, qualification, registrationNumber, shiftType, role, pharmacyId, status } = req.body;
+    const { username, password, fullName, phone, email, qualification, registrationNumber, shiftType, role, pharmacyId, status, supplierId } = req.body;
     try {
         if (!username || !password || !role || !pharmacyId) {
             return res.status(400).json({ message: 'Username, password, role, and pharmacy branch are required' });
@@ -362,7 +362,8 @@ export const createUserAdmin = async (req, res) => {
             shiftType: shiftType || 'Day',
             role,
             pharmacyId,
-            status: status || 'Active'
+            status: status || 'Active',
+            supplierId: role === 'Supplier' && supplierId ? supplierId : undefined
         });
 
         // Log User Creation in UserAudit
@@ -376,7 +377,8 @@ export const createUserAdmin = async (req, res) => {
                 fullName: user.fullName,
                 role: user.role,
                 pharmacyId: user.pharmacyId,
-                status: user.status
+                status: user.status,
+                supplierId: user.supplierId
             }
         });
 
@@ -389,7 +391,7 @@ export const createUserAdmin = async (req, res) => {
 
 export const updateUserAdmin = async (req, res) => {
     const { id } = req.params;
-    const { username, fullName, phone, email, qualification, registrationNumber, shiftType, role, pharmacyId, status } = req.body;
+    const { username, fullName, phone, email, qualification, registrationNumber, shiftType, role, pharmacyId, status, supplierId } = req.body;
     try {
         const user = await User.findById(id);
         if (!user) {
@@ -446,6 +448,10 @@ export const updateUserAdmin = async (req, res) => {
                 previousValue: { status: user.status },
                 newValue: { status }
             });
+        }
+
+        if (supplierId !== undefined) {
+            user.supplierId = role === 'Supplier' && supplierId ? supplierId : undefined;
         }
 
         user.fullName = fullName !== undefined ? fullName : user.fullName;

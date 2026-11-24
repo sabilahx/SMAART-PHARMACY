@@ -138,56 +138,69 @@ export default function BranchComparison() {
             </div>
 
             {/* Branches Table */}
-            <div className="rounded-xl overflow-hidden premium-card border border-[var(--card-border)] shadow-2xl">
+            <div className="rounded-2xl overflow-hidden premium-card border border-[var(--card-border)] shadow-xl">
                 <div className="overflow-x-auto scrollable">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full min-w-[1100px] text-left border-collapse">
                         <thead>
                             <tr className="border-b border-[var(--card-border)] bg-[var(--bg-secondary)] text-xs uppercase font-bold text-[var(--text-secondary)] tracking-wider">
-                                <th className="p-4 pl-6 text-center w-[70px]">Rank</th>
-                                <th className="p-4">Branch Name</th>
-                                <th className="p-4">Location Address</th>
-                                <th className="p-4 text-center">Health Score</th>
-                                <th className="p-4 text-right">Inventory Valuation</th>
-                                <th className="p-4 text-right">Dead Stock (At Risk)</th>
-                                <th className="p-4 text-center">Low Stock Medicines</th>
-                                <th className="p-4 text-center">Active Users</th>
-                                <th className="p-4 text-center">Unread Alerts</th>
-                                <th className="p-4 pr-6 text-center">Actions</th>
+                                <th className="p-4 pl-6 text-center whitespace-nowrap w-[80px]">Rank</th>
+                                <th className="p-4 whitespace-nowrap min-w-[190px]">Branch Name</th>
+                                <th className="p-4 whitespace-nowrap min-w-[210px]">Location Address</th>
+                                <th className="p-4 text-center whitespace-nowrap min-w-[130px]">Health Score</th>
+                                <th className="p-4 text-right whitespace-nowrap min-w-[160px]">Inventory Valuation</th>
+                                <th className="p-4 text-right whitespace-nowrap min-w-[160px]">Dead Stock (At Risk)</th>
+                                <th className="p-4 text-center whitespace-nowrap min-w-[130px]">Low Stock</th>
+                                <th className="p-4 text-center whitespace-nowrap min-w-[110px]">Active Users</th>
+                                <th className="p-4 text-center whitespace-nowrap min-w-[140px]">Unread Alerts</th>
+                                <th className="p-4 pr-6 text-center whitespace-nowrap min-w-[140px]">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/[0.03] text-xs font-semibold text-[var(--text-secondary)]">
+                        <tbody className="divide-y divide-white/[0.04] text-sm font-medium text-[var(--text-secondary)]">
                             {[...branches].sort((a, b) => b.healthScore - a.healthScore).map((b, idx) => {
-                                const hColor = b.healthScore >= 90 ? 'text-emerald-400 bg-emerald-500/10' : b.healthScore >= 75 ? 'text-amber-400 bg-amber-500/10' : 'text-red-400 bg-red-500/10';
-                                const medal = idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
+                                const hColor = b.healthScore >= 90 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : b.healthScore >= 75 ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-red-400 bg-red-500/10 border-red-500/30';
+                                const rankLabel = `#0${idx + 1}`;
+                                const rankBadge = idx === 0 
+                                    ? 'text-amber-400 bg-amber-400/10 border-amber-400/30' 
+                                    : idx === 1 
+                                    ? 'text-slate-300 bg-slate-300/10 border-slate-300/30' 
+                                    : idx === 2 
+                                    ? 'text-amber-500 bg-amber-500/10 border-amber-500/30' 
+                                    : 'text-[var(--text-secondary)] bg-[var(--card-bg)] border-[var(--card-border)]';
+
                                 return (
                                     <tr key={b.pharmacyId} className={`hover:bg-[var(--bg-secondary)] transition-all ${getHealthBorder(b.healthScore)}`}>
-                                        <td className="p-4 pl-6 text-center font-bold text-[var(--text-secondary)] font-mono text-xs">{medal}</td>
-                                        <td className="p-4 text-[var(--text-primary)] font-serif text-sm">{b.name}</td>
-                                        <td className="p-4 text-xs text-[var(--text-secondary)] max-w-[200px] truncate" title={b.address}>{b.address || 'N/A'}</td>
-                                        <td className="p-4 text-center">
-                                            <span className={`px-2 py-0.5 rounded text-xs font-black ${hColor}`}>
+                                        <td className="p-4 pl-6 text-center whitespace-nowrap">
+                                            <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-bold border font-mono ${rankBadge}`}>
+                                                {rankLabel}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-[var(--text-primary)] font-semibold text-sm sm:text-base whitespace-nowrap">{b.name}</td>
+                                        <td className="p-4 text-xs text-[var(--text-secondary)] max-w-[220px] truncate" title={b.address}>{b.address || 'N/A'}</td>
+                                        <td className="p-4 text-center whitespace-nowrap">
+                                            <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${hColor}`}>
                                                 {b.healthScore}%
                                             </span>
                                         </td>
-                                        <td className="p-4 text-right text-[var(--text-primary)] font-mono">₹{b.totalValuation.toLocaleString('en-IN')}</td>
-                                        <td className={`p-4 text-right font-mono ${b.deadStockValue > 0 ? 'text-red-400 font-bold' : 'text-[var(--text-secondary)] font-normal'}`}>
+                                        <td className="p-4 text-right text-[var(--text-primary)] font-mono text-sm sm:text-base whitespace-nowrap">₹{b.totalValuation.toLocaleString('en-IN')}</td>
+                                        <td className={`p-4 text-right font-mono text-sm sm:text-base whitespace-nowrap ${b.deadStockValue > 0 ? 'text-red-400 font-bold' : 'text-[var(--text-secondary)] font-normal'}`}>
                                             ₹{b.deadStockValue.toLocaleString('en-IN')}
                                         </td>
-                                        <td className="p-4 text-center text-[var(--text-secondary)] font-mono">{b.lowStockCount}</td>
-                                        <td className="p-4 text-center text-[var(--text-secondary)]">{b.userCount}</td>
-                                        <td className="p-4 text-center">
+                                        <td className="p-4 text-center text-[var(--text-primary)] font-mono font-semibold whitespace-nowrap">{b.lowStockCount}</td>
+                                        <td className="p-4 text-center text-[var(--text-secondary)] font-medium whitespace-nowrap">{b.userCount}</td>
+                                        <td className="p-4 text-center whitespace-nowrap">
                                             {b.alertCount > 0 ? (
-                                                <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded-full font-bold">
-                                                    {b.alertCount} Active
+                                                <span className="inline-flex items-center gap-1.5 bg-red-500/15 text-red-400 border border-red-500/25 text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse flex-shrink-0" />
+                                                    <span>{b.alertCount} Active</span>
                                                 </span>
                                             ) : (
-                                                <span className="text-[var(--text-secondary)] text-xs">None</span>
+                                                <span className="text-[var(--text-secondary)] text-xs font-medium">None</span>
                                             )}
                                         </td>
-                                        <td className="p-4 pr-6 text-center">
+                                        <td className="p-4 pr-6 text-center whitespace-nowrap">
                                             <button 
                                                 onClick={() => handleInspectBranch(b.pharmacyId, b.name)}
-                                                className="px-3 py-1.5 rounded bg-cyan-400 text-[var(--text-primary)] hover:bg-cyan-300 text-xs font-black cursor-pointer shadow-lg shadow-cyan-400/10 hover:shadow-cyan-400/25 transition-all"
+                                                className="px-3.5 py-1.5 rounded-lg bg-cyan-400 text-slate-950 hover:bg-cyan-300 text-xs font-bold cursor-pointer shadow-md transition-all whitespace-nowrap"
                                             >
                                                 Inspect Branch
                                             </button>

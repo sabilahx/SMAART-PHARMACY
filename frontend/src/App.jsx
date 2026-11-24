@@ -17,11 +17,18 @@ import BranchComparison from './pages/BranchComparison';
 import ReorderIntelligence from './pages/ReorderIntelligence';
 import Pharmacies from './pages/Pharmacies';
 import BranchProfile from './pages/BranchProfile';
+import AddPharmacy from './pages/AddPharmacy';
+import EditPharmacy from './pages/EditPharmacy';
 import Users from './pages/Users';
 import UserProfile from './pages/UserProfile';
+import AddUser from './pages/AddUser';
+import EditUser from './pages/EditUser';
 import Suppliers from './pages/Suppliers';
 import SupplierProfile from './pages/SupplierProfile';
+import AddSupplier from './pages/AddSupplier';
+import EditSupplier from './pages/EditSupplier';
 import PurchaseOrders from './pages/PurchaseOrders';
+import AddPurchaseOrder from './pages/AddPurchaseOrder';
 import RevenueAnalytics from './pages/RevenueAnalytics';
 import EmergencySupport from './pages/EmergencySupport';
 import ActionCenter from './pages/ActionCenter';
@@ -66,8 +73,12 @@ export default function App() {
                                     <Route path="/expiry-dashboard" element={<ExpiryDashboard />} />
                                     <Route path="/reorder-intelligence" element={<ReorderIntelligence />} />
                                     <Route path="/suppliers" element={<Suppliers />} />
+                                    <Route path="/suppliers/add" element={<AddSupplier />} />
+                                    <Route path="/suppliers/edit/:id" element={<EditSupplier />} />
                                     <Route path="/suppliers/:id" element={<SupplierProfile />} />
                                     <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                                    <Route path="/purchase-orders/new" element={<AddPurchaseOrder />} />
+                                    <Route path="/purchase-orders/add" element={<AddPurchaseOrder />} />
                                     <Route path="/revenue" element={<RevenueAnalytics />} />
                                 </Route>
 
@@ -75,7 +86,11 @@ export default function App() {
                                 <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
                                     <Route path="/branch-comparison" element={<BranchComparison />} />
                                     <Route path="/pharmacies" element={<Pharmacies />} />
+                                    <Route path="/pharmacies/add" element={<AddPharmacy />} />
+                                    <Route path="/pharmacies/edit/:id" element={<EditPharmacy />} />
                                     <Route path="/users" element={<Users />} />
+                                    <Route path="/users/add" element={<AddUser />} />
+                                    <Route path="/users/edit/:id" element={<EditUser />} />
                                 </Route>
                                 
                                 {/* Fallback routes redirection */}

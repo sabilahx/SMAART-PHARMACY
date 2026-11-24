@@ -4,13 +4,15 @@ import Alert from '../models/Alert.js';
 export const getAlerts = async (req, res) => {
     try {
         let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
+        const query = { isRead: false };
+        if (req.user.role === 'Admin') {
+            if (req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
+                query.pharmacyId = req.query.branchId;
+            }
+        } else {
+            query.pharmacyId = pharmacyId;
         }
-        const alerts = await Alert.find({
-            pharmacyId,
-            isRead: false
-        }).sort({ createdAt: -1 });
+        const alerts = await Alert.find(query).sort({ createdAt: -1 });
 
         res.json(alerts);
     } catch (err) {
@@ -22,11 +24,16 @@ export const getAlerts = async (req, res) => {
 export const markAlertAsRead = async (req, res) => {
     try {
         let pharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
-            pharmacyId = req.query.branchId;
+        const query = { _id: req.params.id };
+        if (req.user.role === 'Admin') {
+            if (req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
+                query.pharmacyId = req.query.branchId;
+            }
+        } else {
+            query.pharmacyId = pharmacyId;
         }
         const alert = await Alert.findOneAndUpdate(
-            { _id: req.params.id, pharmacyId },
+            query,
             { isRead: true },
             { new: true }
         );

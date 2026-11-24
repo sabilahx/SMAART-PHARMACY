@@ -12,7 +12,7 @@ export const searchNetworkMedicine = async (req, res) => {
         }
 
         let userPharmacyId = req.user.pharmacyId;
-        if (req.user.role === 'Admin' && req.query.branchId) {
+        if (req.user.role === 'Admin' && req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
             userPharmacyId = req.query.branchId;
         }
 

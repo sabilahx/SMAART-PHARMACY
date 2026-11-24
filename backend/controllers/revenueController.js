@@ -16,7 +16,7 @@ export const getRevenueAnalytics = async (req, res) => {
             queryPharmacyId = new mongoose.Types.ObjectId(req.user.pharmacyId);
         } else if (req.user.role === 'Admin') {
             // Admin can query a specific branch or all
-            if (req.query.branchId) {
+            if (req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
                 queryPharmacyId = new mongoose.Types.ObjectId(req.query.branchId);
             }
         }
@@ -187,7 +187,7 @@ export const exportRevenueCSV = async (req, res) => {
             return res.status(403).json({ message: 'Access Denied.' });
         } else if (req.user.role === 'Manager') {
             queryPharmacyId = new mongoose.Types.ObjectId(req.user.pharmacyId);
-        } else if (req.user.role === 'Admin' && req.query.branchId) {
+        } else if (req.user.role === 'Admin' && req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'overview') {
             queryPharmacyId = new mongoose.Types.ObjectId(req.query.branchId);
         }
 

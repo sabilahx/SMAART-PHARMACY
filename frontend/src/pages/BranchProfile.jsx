@@ -149,18 +149,15 @@ export default function BranchProfile() {
                 let statusLabel = 'Healthy';
                 let statusColor = 'text-emerald-400';
                 let statusBg = 'border-emerald-500/25 bg-emerald-500/[0.02]';
-                let statusIndicator = '🟢';
                 
                 if (performance.healthScore < 75) {
                     statusLabel = 'Critical Attention Required';
                     statusColor = 'text-red-400';
                     statusBg = 'border-red-500/25 bg-red-500/[0.02]';
-                    statusIndicator = '🔴';
                 } else if (isWarning) {
                     statusLabel = 'Needs Action';
                     statusColor = 'text-amber-400';
                     statusBg = 'border-amber-500/25 bg-amber-500/[0.02]';
-                    statusIndicator = '🟠';
                 }
 
                 return (
@@ -173,50 +170,57 @@ export default function BranchProfile() {
                             </div>
                             <div className="flex flex-col gap-1">
                                 <span className="text-xs text-[var(--text-secondary)]">Branch Status</span>
-                                <h3 className={`text-xl font-black font-serif ${statusColor}`}>
-                                    {statusIndicator} {statusLabel}
+                                <h3 className={`text-xl font-bold flex items-center gap-2 ${statusColor}`}>
+                                    <span className="w-2.5 h-2.5 rounded-full inline-block animate-pulse" style={{ background: 'currentColor' }} />
+                                    <span>{statusLabel}</span>
                                 </h3>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                                <div className="flex flex-col gap-1.5">
-                                    <span className="text-xs font-extrabold uppercase tracking-wider text-[var(--text-secondary)]">Current Issues</span>
-                                    <ul className="text-xs text-[var(--text-secondary)] space-y-1">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-secondary)]">Current Issues</span>
+                                    <div className="flex flex-wrap gap-2">
                                         {performance.lowStockCount > 0 && (
-                                            <li className="flex items-center gap-1.5">
-                                                <span className="text-amber-400">•</span> {performance.lowStockCount} low stock medicine{performance.lowStockCount !== 1 ? 's' : ''}
-                                            </li>
+                                            <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1.5 rounded-lg text-amber-500 text-xs font-bold">
+                                                <span className="material-symbols-rounded text-sm">inventory_2</span>
+                                                {performance.lowStockCount} Low Stock
+                                            </div>
                                         )}
                                         {performance.expiredStockCount > 0 && (
-                                            <li className="flex items-center gap-1.5">
-                                                <span className="text-red-400">•</span> {performance.expiredStockCount} expiry alert{performance.expiredStockCount !== 1 ? 's' : ''}
-                                            </li>
+                                            <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2.5 py-1.5 rounded-lg text-red-500 text-xs font-bold">
+                                                <span className="material-symbols-rounded text-sm">event_busy</span>
+                                                {performance.expiredStockCount} Expired
+                                            </div>
                                         )}
                                         {performance.lowStockCount === 0 && performance.expiredStockCount === 0 && (
-                                            <li className="flex items-center gap-1.5 text-emerald-400">
-                                                <span>✓</span> No active inventory stock alerts
-                                            </li>
+                                            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg text-emerald-500 text-xs font-bold">
+                                                <span className="material-symbols-rounded text-sm">check_circle</span>
+                                                Optimal Stock
+                                            </div>
                                         )}
-                                    </ul>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <span className="text-xs font-extrabold uppercase tracking-wider text-[var(--text-secondary)]">Recommended Actions</span>
-                                    <ul className="text-xs text-[var(--text-secondary)] space-y-1 font-semibold">
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-secondary)]">Priority Actions</span>
+                                    <div className="flex flex-wrap gap-2">
                                         {performance.expiredStockCount > 0 && (
-                                            <li className="flex items-center gap-1.5">
-                                                <span className="text-[#00B4D8]">•</span> Review expiry queue
-                                            </li>
+                                            <div className="flex items-center gap-1.5 bg-[#00B4D8]/10 border border-[#00B4D8]/20 px-2.5 py-1.5 rounded-lg text-[#00B4D8] text-xs font-bold">
+                                                <span className="material-symbols-rounded text-sm">assignment_turned_in</span>
+                                                Clear Expiries
+                                            </div>
                                         )}
                                         {performance.lowStockCount > 0 && (
-                                            <li className="flex items-center gap-1.5">
-                                                <span className="text-[#00B4D8]">•</span> Reorder critical stock
-                                            </li>
+                                            <div className="flex items-center gap-1.5 bg-[#00B4D8]/10 border border-[#00B4D8]/20 px-2.5 py-1.5 rounded-lg text-[#00B4D8] text-xs font-bold">
+                                                <span className="material-symbols-rounded text-sm">shopping_cart</span>
+                                                Reorder Stock
+                                            </div>
                                         )}
                                         {performance.lowStockCount === 0 && performance.expiredStockCount === 0 && (
-                                            <li className="flex items-center gap-1.5">
-                                                <span className="text-emerald-400">•</span> Monitor sales velocity
-                                            </li>
+                                            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg text-emerald-500 text-xs font-bold">
+                                                <span className="material-symbols-rounded text-sm">trending_up</span>
+                                                Monitor Sales
+                                            </div>
                                         )}
-                                    </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -229,17 +233,17 @@ export default function BranchProfile() {
                                 </span>
                                 <span className="text-xs text-red-400 font-bold uppercase mt-1">Dead Stock Value at Risk</span>
                             </div>
-                            <div className="flex gap-2 w-full mt-2">
+                            <div className="flex flex-col sm:flex-row gap-3 w-full mt-5">
                                 <button 
                                     onClick={() => navigate('/expiry-dashboard')}
-                                    className="flex-1 py-1.5 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer bg-[var(--bg-secondary)] hover:bg-[var(--card-bg)]/10 text-[var(--text-primary)] border border-[var(--card-border)] text-center"
+                                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer bg-[var(--bg-secondary)] hover:bg-[var(--card-bg)]/50 text-[var(--text-primary)] border border-[var(--card-border)] text-center whitespace-nowrap shadow-sm hover:shadow"
                                 >
                                     Review Expiry
                                 </button>
                                 <button 
                                     onClick={() => navigate('/reorder-intelligence')}
-                                    className="flex-1 py-1.5 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer text-[var(--text-primary)] text-center"
-                                    style={{ background: '#00B4D8' }}
+                                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all duration-200 cursor-pointer text-slate-900 text-center whitespace-nowrap shadow-sm hover:shadow"
+                                    style={{ background: 'linear-gradient(135deg, #00e5ff 0%, #0099a8 100%)' }}
                                 >
                                     Reorder Stock
                                 </button>
@@ -250,67 +254,137 @@ export default function BranchProfile() {
             })()}
 
             {/* Main Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* Basic Details Card */}
-                <div className="rounded-2xl p-6 flex flex-col gap-4 bg-[var(--card-bg)] backdrop-blur-md shadow-card border border-[var(--card-border)]">
-                    <div className="flex items-center gap-2 pb-2 border-b border-[var(--card-border)]">
-                        <span className="material-symbols-rounded text-cyan-400 text-sm">info</span>
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Basic Information</h3>
+                <div className="rounded-2xl p-6 flex flex-col gap-5 premium-card shadow-sm">
+                    <div className="flex items-center gap-2 pb-3 border-b border-[var(--card-border)]">
+                        <span className="material-symbols-rounded text-cyan-400 text-base">info</span>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Branch Identity</h3>
                     </div>
-                    <div className="flex flex-col gap-3 text-xs">
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Branch Name</span><span className="text-[var(--text-primary)] font-bold">{pharmacy.name}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Branch Code</span><span className="text-[var(--text-primary)] font-mono">{pharmacy.branchCode}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Contact Phone</span><span className="text-[var(--text-primary)]">{pharmacy.contactPhone || 'N/A'}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Branch Email</span><span className="text-cyan-400 font-mono">{pharmacy.email || 'N/A'}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Coordinator</span><span className="text-[var(--text-primary)]">{pharmacy.coordinator || 'N/A'}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Assigned Manager</span><span className="text-[var(--text-primary)] font-bold">{pharmacy.assignedManager?.fullName || 'Unassigned'}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Joined Date</span><span className="text-[var(--text-secondary)] font-mono">{pharmacy.joinedDate ? new Date(pharmacy.joinedDate).toLocaleDateString('en-GB') : 'N/A'}</span></div>
-                        <div className="flex justify-between py-1"><span className="text-[var(--text-secondary)] font-medium">Opening Hours</span><span className="text-[var(--text-primary)]">{pharmacy.openingHours}</span></div>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                            <span className="material-symbols-rounded text-[var(--text-secondary)] text-xl p-2 rounded-lg bg-[var(--card-bg)] shadow-sm">storefront</span>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-black text-[var(--text-primary)] font-serif">{pharmacy.name}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mt-0.5">Code: {pharmacy.branchCode}</span>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                                <span className="material-symbols-rounded text-[var(--text-muted)] text-[14px]">call</span>
+                                <span className="text-xs font-semibold text-[var(--text-primary)] mt-1">{pharmacy.contactPhone || 'N/A'}</span>
+                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Phone</span>
+                            </div>
+                            <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                                <span className="material-symbols-rounded text-[var(--text-muted)] text-[14px]">mail</span>
+                                <span className="text-xs font-semibold text-[var(--text-primary)] mt-1 truncate" title={pharmacy.email}>{pharmacy.email || 'N/A'}</span>
+                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Email</span>
+                            </div>
+                            <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                                <span className="material-symbols-rounded text-[var(--text-muted)] text-[14px]">shield_person</span>
+                                <span className="text-xs font-semibold text-[var(--text-primary)] mt-1 truncate" title={pharmacy.assignedManager?.fullName}>{pharmacy.assignedManager?.fullName || 'Unassigned'}</span>
+                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Manager</span>
+                            </div>
+                            <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                                <span className="material-symbols-rounded text-[var(--text-muted)] text-[14px]">schedule</span>
+                                <span className="text-xs font-semibold text-[var(--text-primary)] mt-1">{pharmacy.openingHours}</span>
+                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Hours</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Performance Metrics Card */}
-                <div className="rounded-2xl p-6 flex flex-col gap-4 bg-[var(--card-bg)] backdrop-blur-md shadow-card border border-[var(--card-border)]">
-                    <div className="flex items-center gap-2 pb-2 border-b border-[var(--card-border)]">
-                        <span className="material-symbols-rounded text-emerald-400 text-sm">trending_up</span>
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Performance Metrics</h3>
+                <div className="rounded-2xl p-6 flex flex-col gap-5 premium-card shadow-sm">
+                    <div className="flex items-center gap-2 pb-3 border-b border-[var(--card-border)]">
+                        <span className="material-symbols-rounded text-emerald-400 text-base">monitoring</span>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Inventory Health</h3>
                     </div>
-                    <div className="flex flex-col gap-3 text-xs">
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Branch Health Score</span><span className={`px-2 py-0.5 rounded text-xs font-black ${healthColor}`}>{performance.healthScore}%</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Total Medicines</span><span className="text-[var(--text-primary)] font-mono">{performance.totalMedicines}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Inventory Valuation</span><span className="text-cyan-400 font-mono">₹{performance.inventoryValue.toLocaleString('en-IN')}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Low Stock Medicines</span><span className="text-amber-400 font-mono font-bold">{performance.lowStockCount}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Expired Medicines</span><span className="text-red-400 font-mono font-bold">{performance.expiredStockCount}</span></div>
-                        <div className="flex justify-between py-1"><span className="text-[var(--text-secondary)] font-medium">Dead Stock Valuation</span><span className="text-red-400 font-mono font-bold">₹{performance.deadStockValue.toLocaleString('en-IN')}</span></div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-2 flex items-center justify-between p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)] relative overflow-hidden group">
+                            <div className="absolute right-0 top-0 h-full w-24 bg-gradient-to-l from-[#00e5ff]/10 to-transparent pointer-events-none group-hover:from-[#00e5ff]/20 transition-all" />
+                            <div className="flex flex-col gap-0.5 z-10">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Total Valuation</span>
+                                <span className="text-xl font-black text-cyan-400 font-mono">₹{performance.inventoryValue.toLocaleString('en-IN')}</span>
+                            </div>
+                            <span className="material-symbols-rounded text-cyan-400/20 text-4xl absolute -right-2 -bottom-2 z-0 group-hover:scale-110 transition-transform">account_balance_wallet</span>
+                        </div>
+                        
+                        <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Catalog Size</span>
+                            <div className="flex items-end justify-between mt-1">
+                                <span className="text-lg font-black text-[var(--text-primary)] font-mono">{performance.totalMedicines}</span>
+                                <span className="material-symbols-rounded text-[var(--text-muted)] text-sm mb-1">category</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+                            <span className="text-[10px] uppercase font-bold text-red-400/80">Dead Stock</span>
+                            <div className="flex items-end justify-between mt-1">
+                                <span className="text-lg font-black text-red-400 font-mono truncate" title={`₹${performance.deadStockValue}`}>₹{performance.deadStockValue > 9999 ? (performance.deadStockValue/1000).toFixed(1)+'k' : performance.deadStockValue}</span>
+                                <span className="material-symbols-rounded text-red-400/50 text-sm mb-1">trending_down</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
+                            <span className="text-[10px] uppercase font-bold text-amber-500/80">Low Stock Items</span>
+                            <div className="flex items-end justify-between mt-1">
+                                <span className="text-lg font-black text-amber-500 font-mono">{performance.lowStockCount}</span>
+                                <span className="material-symbols-rounded text-amber-500/50 text-sm mb-1">warning</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg-secondary)] border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+                            <span className="text-[10px] uppercase font-bold text-red-400/80">Expired Items</span>
+                            <div className="flex items-end justify-between mt-1">
+                                <span className="text-lg font-black text-red-400 font-mono">{performance.expiredStockCount}</span>
+                                <span className="material-symbols-rounded text-red-400/50 text-sm mb-1">hourglass_disabled</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Staff Information Card */}
-                <div className="rounded-2xl p-6 flex flex-col gap-4 bg-[var(--card-bg)] backdrop-blur-md shadow-card border border-[var(--card-border)]">
-                    <div className="flex items-center gap-2 pb-2 border-b border-[var(--card-border)]">
-                        <span className="material-symbols-rounded text-violet-400 text-sm">group</span>
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Staff Information</h3>
+                <div className="rounded-2xl p-6 flex flex-col gap-5 premium-card shadow-sm">
+                    <div className="flex items-center gap-2 pb-3 border-b border-[var(--card-border)]">
+                        <span className="material-symbols-rounded text-violet-400 text-base">groups</span>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">Workforce</h3>
                     </div>
-                    <div className="flex flex-col gap-3 text-xs">
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Total Managers</span><span className="text-[var(--text-primary)] font-mono font-bold">{staff.totalManagers}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Total Pharmacists</span><span className="text-[var(--text-primary)] font-mono">{staff.totalPharmacists}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Active Users</span><span className="text-emerald-400 font-mono font-bold">{staff.activeUsers}</span></div>
-                        <div className="flex justify-between py-1 border-b border-[var(--card-border)]"><span className="text-[var(--text-secondary)] font-medium">Inactive Users</span><span className="text-[var(--text-secondary)] font-mono">{staff.inactiveUsers}</span></div>
-                        <div className="flex flex-col gap-1.5 mt-2">
-                            <span className="text-xs text-[var(--text-secondary)] uppercase font-black">Active Team Roster</span>
-                            <div className="flex flex-wrap gap-1">
-                                {staff.users.slice(0, 4).map(u => (
-                                    <span key={u._id} className="text-xs px-2 py-0.5 rounded bg-[var(--bg-secondary)] border border-[var(--card-border)] text-[var(--text-secondary)] font-medium font-sans">
-                                        {u.fullName || u.username} ({u.role[0]})
-                                    </span>
-                                ))}
-                                {staff.users.length > 4 && (
-                                    <span className="text-xs px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400 font-medium font-sans">
-                                        +{staff.users.length - 4} more
-                                    </span>
-                                )}
-                            </div>
+                    <div className="flex gap-3 mb-1">
+                        <div className="flex-1 flex flex-col items-center justify-center p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] text-center">Active</span>
+                            <span className="text-xl font-black text-emerald-400 font-mono mt-1">{staff.activeUsers}</span>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center justify-center p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] text-center">Total Staff</span>
+                            <span className="text-xl font-black text-[var(--text-primary)] font-mono mt-1">{staff.users.length}</span>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center justify-center p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--card-border)]">
+                            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] text-center">Managers</span>
+                            <span className="text-xl font-black text-violet-400 font-mono mt-1">{staff.totalManagers}</span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-2 flex-1">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-secondary)]">Active Roster Sample</span>
+                        <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[140px] pr-1 scrollable">
+                            {staff.users.slice(0, 4).map(u => (
+                                <div key={u._id} className="flex items-center justify-between p-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] group hover:border-cyan-400/30 transition-colors">
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                        <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold bg-[var(--card-bg)] text-[var(--text-secondary)] border border-[var(--card-border)] flex-shrink-0">
+                                            {u.fullName ? u.fullName.charAt(0) : u.username.charAt(0)}
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-xs font-bold text-[var(--text-primary)] truncate">{u.fullName || u.username}</span>
+                                            <span className="text-[10px] text-[var(--text-muted)] truncate">{u.role}</span>
+                                        </div>
+                                    </div>
+                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${u.status === 'Active' ? 'bg-emerald-400' : 'bg-[var(--text-muted)]'}`} />
+                                </div>
+                            ))}
+                            {staff.users.length > 4 && (
+                                <div className="text-[10px] font-bold text-center text-cyan-400 py-1 cursor-pointer hover:underline" onClick={() => setActiveTab('staff')}>
+                                    View {staff.users.length - 4} more staff
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -344,12 +418,12 @@ export default function BranchProfile() {
                     )}
                     <button
                         onClick={() => setActiveTab('alerts')}
-                        className={`flex items-center gap-2 pb-3 px-1 text-xs font-bold border-b-2 cursor-pointer transition-all relative ${activeTab === 'alerts' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+                        className={`flex items-center gap-2 pb-3 px-1 text-xs font-bold border-b-2 cursor-pointer transition-all ${activeTab === 'alerts' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                     >
                         <span className="material-symbols-rounded text-sm">notifications</span>
                         Branch Alerts
                         {inventory.alerts.length > 0 && (
-                            <span className="absolute -top-1.5 -right-2 bg-red-500 text-[var(--text-primary)] text-xs font-black w-3.5 h-3.5 flex items-center justify-center rounded-full">
+                            <span className="ml-1.5 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center justify-center font-bold shadow-md shadow-red-500/20">
                                 {inventory.alerts.length}
                             </span>
                         )}

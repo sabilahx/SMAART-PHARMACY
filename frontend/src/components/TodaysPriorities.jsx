@@ -209,7 +209,7 @@ export default function TodaysPriorities({ branchId }) {
                                         {/* Impact with cost badge */}
                                         <div className="flex flex-wrap items-center gap-2 mt-2">
                                             <p className="text-xs font-semibold text-[var(--text-secondary)] flex items-center gap-1.5">
-                                                <span className="text-amber-400/90 text-sm">💰</span>
+                                                <span className="material-symbols-rounded text-amber-400 text-sm">payments</span>
                                                 <span>{priority.impact}</span>
                                             </p>
                                             {priority.costAtRisk > 0 && (
@@ -260,7 +260,7 @@ export default function TodaysPriorities({ branchId }) {
 
                 const renderClearLine = (label, key) => (
                     <div key={key} className="flex items-center gap-2 text-emerald-400 text-sm">
-                        <span>✅</span>
+                        <span className="material-symbols-rounded text-emerald-400 text-sm">check_circle</span>
                         <span>{label}</span>
                     </div>
                 );
@@ -272,7 +272,7 @@ export default function TodaysPriorities({ branchId }) {
                                 <span className="material-symbols-rounded text-2xl">check_circle</span>
                             </div>
                             <h4 className="text-sm font-bold text-[var(--text-primary)] font-serif" style={{ fontFamily: "'Lora', serif" }}>All Systems Healthy</h4>
-                            <p className="text-xs text-[var(--text-secondary)] max-w-sm">✅ All clear — no critical issues today. Your branch is operating smoothly.</p>
+                            <p className="text-xs text-[var(--text-secondary)] max-w-sm">All clear — no critical issues today. Your branch is operating smoothly.</p>
                         </div>
                     );
                 }

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Pill, Activity, ShieldCheck, 
+    CheckCircle2, Lock, User, Eye, EyeOff,
+    TrendingUp, Database
+} from 'lucide-react';
 
 export default function Login() {
     const { login, isAuthenticated, error: authError, user } = useAuth();
@@ -12,12 +18,6 @@ export default function Login() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPass, setShowPass] = useState(false);
     const [focused, setFocused] = useState(null);
-    const [shouldShake, setShouldShake] = useState(false);
-    const [showStat, setShowStat] = useState(false);
-    
-    // Transition state management
-    const [transitionPhase, setTransitionPhase] = useState('idle');
-    const [logoOpacityClass, setLogoOpacityClass] = useState('opacity-0');
     const [successRole, setSuccessRole] = useState('');
 
     useEffect(() => {
@@ -26,343 +26,317 @@ export default function Login() {
         }
     }, [isAuthenticated, user, navigate]);
 
-    useEffect(() => {
-        const timer = setTimeout(() => setShowStat(true), 1000);
-        return () => clearTimeout(timer);
-    }, []);
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLocalError('');
         
         if (!username || !password) {
             setLocalError('Please fill in both fields.');
-            setShouldShake(true);
-            setTimeout(() => setShouldShake(false), 500);
             return;
         }
 
         setIsSubmitting(true);
-        setTransitionPhase('signing-in');
 
         const startTime = Date.now();
         const result = await login(username, password);
         const elapsed = Date.now() - startTime;
-        const delay = Math.max(500 - elapsed, 0);
+        const delay = Math.max(800 - elapsed, 0); // Artificial delay for smooth animation
         await new Promise(resolve => setTimeout(resolve, delay));
-
-        setIsSubmitting(false);
 
         if (result.success) {
             localStorage.setItem('justLoggedIn', 'true');
             const targetRole = result.user?.role || 'Pharmacist';
             setSuccessRole(targetRole);
-
-            // Step 2: Entire login page fades to dark #0A0A0A — 400ms fade
-            setTransitionPhase('fade-to-black');
-            await new Promise(resolve => setTimeout(resolve, 400));
-
-            // Step 3: Center of screen shows logo — fades in over 300ms, holds for 700ms (total 1000ms)
-            setTransitionPhase('show-logo');
-            setTimeout(() => setLogoOpacityClass('opacity-100'), 50);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Step 4: Fades out — 300ms
-            setLogoOpacityClass('opacity-0');
-            setTransitionPhase('fade-out');
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // Step 5: Dashboard loads
-            navigate(targetRole === 'Pharmacist' ? '/medicines' : '/dashboard');
+            
+            setTimeout(() => {
+                navigate(targetRole === 'Pharmacist' ? '/medicines' : '/dashboard');
+            }, 1000);
         } else {
-            setTransitionPhase('idle');
+            setIsSubmitting(false);
             setLocalError(result.message || 'Authentication failed. Please check your credentials.');
-            setShouldShake(true);
-            setTimeout(() => setShouldShake(false), 500);
         }
     };
 
-    const handleFocus = (field) => setFocused(field);
-    const handleBlur = () => setFocused(null);
-
     const displayError = localError || authError;
 
-    return (
-        <div
-            className={`min-h-screen w-screen relative overflow-hidden flex transition-all duration-400 select-none ${
-                transitionPhase === 'fade-to-black' || transitionPhase === 'show-logo' || transitionPhase === 'fade-out'
-                    ? 'bg-[var(--app-bg)]'
-                    : 'bg-[var(--app-bg)]'
-            }`}
-        >
-            <style dangerouslySetInnerHTML={{ __html: `
-                @keyframes cardShake {
-                    0%, 100% { transform: translateX(0); }
-                    20%, 60% { transform: translateX(-8px); }
-                    40%, 80% { transform: translateX(8px); }
-                }
-                .shake-card {
-                    animation: cardShake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-                }
-                @keyframes pulseSlow {
-                    0%, 100% { opacity: 0.3; transform: scale(1); }
-                    50% { opacity: 0.5; transform: scale(1.1); }
-                }
-                .animate-pulse-slow {
-                    animation: pulseSlow 8s ease-in-out infinite;
-                }
-            `}} />
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { duration: 0.8, staggerChildren: 0.1 } }
+    };
+    
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+    };
 
-            {/* Split Panels Container */}
-            <div className={`w-full min-h-screen flex flex-col lg:flex-row transition-opacity duration-400 ${
-                transitionPhase !== 'idle' && transitionPhase !== 'signing-in' ? 'opacity-0 pointer-events-none' : 'opacity-100'
-            }`}>
-                
-                {/* ════════════════════════════════════════
-                    LEFT PANEL — Product Story Side
-                    ════════════════════════════════════════ */}
-                <div className="hidden lg:flex lg:w-1/2 bg-[var(--brand)] relative flex-col justify-between p-16 overflow-hidden border-r border-[var(--card-border)]">
-                    {/* Subtle animated gradient orb bottom-left */}
-                    <div 
-                        className="absolute -bottom-20 -left-20 w-[450px] h-[450px] rounded-full pointer-events-none mix-blend-screen animate-pulse-slow"
-                        style={{
-                            background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
-                            filter: 'blur(55px)',
-                        }}
+    return (
+        <div className="min-h-screen w-full flex bg-canvas font-sans overflow-hidden">
+            
+            {/* ════════════════════════════════════════
+                LEFT PANEL — Brand Story (Hero Section)
+                ════════════════════════════════════════ */}
+            <div className="hidden lg:flex w-1/2 bg-primary-gradient relative overflow-hidden flex-col justify-between p-12 xl:p-20 text-white shadow-2xl z-10 border-r border-navy-muted/20">
+                {/* Animated Background Elements */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-50">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CgkJPHBhdGggZD0iTTAgMGg0MHY0MEgwVjB6bTIwIDIwYzAgMTEuMDQ2IDguOTU0IDIwIDIwIDIwVjIwSDIweiIgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIwLjAyIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz4KPC9zdmc+')] opacity-30" />
+                    
+                    {/* Floating Orbs */}
+                    <motion.div 
+                        animate={{ y: [0, -30, 0], opacity: [0.3, 0.6, 0.3] }}
+                        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute top-[10%] left-[10%] w-[500px] h-[500px] bg-brand-cyan rounded-full mix-blend-screen filter blur-[120px] opacity-30" 
+                    />
+                    <motion.div 
+                        animate={{ y: [0, 30, 0], x: [0, 20, 0], opacity: [0.2, 0.4, 0.2] }}
+                        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                        className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-brand-dark rounded-full mix-blend-multiply filter blur-[100px] opacity-40" 
                     />
 
-                    {/* TOP: Logo mark + name */}
-                    <div className="flex items-center gap-3 z-10">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/15 border border-white/30 flex-shrink-0">
-                            <span className="text-xl select-none">💊</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-lg font-black tracking-tight leading-none text-white font-serif" style={{ fontFamily: "'Lora', serif" }}>SMAART</span>
-                            <span className="text-[9px] font-bold tracking-widest text-white/80 uppercase leading-none mt-1">PHARMACY</span>
-                        </div>
-                    </div>
-
-                    {/* MIDDLE: Headline */}
-                    <div className="flex flex-col gap-6 my-auto z-10 max-w-md">
-                        <h1 className="text-4xl font-extrabold text-white leading-tight font-serif" style={{ fontFamily: "'Lora', serif" }}>
-                            Pharmacy Operations,<br />Fully Visible.
-                        </h1>
-                        <p className="text-sm text-white/80">
-                            Real-time intelligence for Indian multi-branch pharmacy chains.
-                        </p>
-                        
-                        {/* DIVIDER: thin line, 40px wide */}
-                        <div className="h-[1px] bg-white/30 w-10 my-2" />
-
-                        {/* THREE PROOF POINTS */}
-                        <div className="flex flex-col gap-5">
-                            <div className="flex items-center gap-3">
-                                <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/10 text-white text-sm flex-shrink-0">
-                                    🏥
-                                </span>
-                                <span className="text-xs font-semibold text-white/90">Multi-branch inventory in real time</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/10 text-white text-sm flex-shrink-0">
-                                    ⏳
-                                </span>
-                                <span className="text-xs font-semibold text-white/90">Expiry risk surfaced before it costs you</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/10 text-white text-sm flex-shrink-0">
-                                    🔒
-                                </span>
-                                <span className="text-xs font-semibold text-white/90">Complete audit trail, compliance ready</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* BOTTOM: Subtle animated stat */}
-                    <div className={`mt-auto transition-all duration-1000 z-10 ${showStat ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                        <p className="text-xs italic text-white/70 font-medium font-serif" style={{ fontFamily: "'Lora', serif" }}>
-                            "₹11,830 in dead stock identified on first day of deployment."
-                        </p>
-                    </div>
+                    {/* Floating Icons */}
+                    <motion.div 
+                        animate={{ y: [0, -20, 0], rotate: [0, 10, 0] }}
+                        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute top-[20%] right-[15%] text-white/10"
+                    >
+                        <Pill size={120} strokeWidth={1} />
+                    </motion.div>
+                    
+                    <motion.div 
+                        animate={{ y: [0, 25, 0], rotate: [0, -15, 0] }}
+                        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                        className="absolute bottom-[30%] left-[10%] text-white/10"
+                    >
+                        <Activity size={150} strokeWidth={1} />
+                    </motion.div>
                 </div>
 
-                {/* ════════════════════════════════════════
-                    RIGHT PANEL — Login Form Side
-                    ════════════════════════════════════════ */}
-                <div className="w-full lg:w-1/2 bg-[var(--card-bg)] flex flex-col justify-between p-8 md:p-16 relative">
-                    {/* Top Right: Secure Healthcare Platform */}
-                    <div className="hidden sm:block absolute top-8 right-8 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] font-mono">
-                        Secure Healthcare Platform · v1.0
+                {/* Top: Logo */}
+                <motion.div 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="relative z-10 flex items-center gap-4"
+                >
+                    <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-glow">
+                        <Pill className="text-brand-cyan" size={24} />
                     </div>
+                    <div>
+                        <h2 className="text-3xl font-extrabold tracking-tight font-outfit leading-none">SMAART</h2>
+                        <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-brand-cyan mt-1 leading-none">Pharmacy</p>
+                    </div>
+                </motion.div>
 
-                    {/* Center the login form */}
-                    <div className={`my-auto w-full max-w-[400px] mx-auto flex flex-col gap-6 ${shouldShake ? 'shake-card' : ''}`}>
+                {/* Middle: Content */}
+                <motion.div 
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    className="relative z-10 max-w-xl my-auto"
+                >
+                    <motion.h1 variants={itemVariants} className="text-5xl xl:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6 font-manrope">
+                        Smarter Pharmacies.<br/>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan to-emerald">Better Patient Care.</span>
+                    </motion.h1>
+                    <motion.p variants={itemVariants} className="text-lg text-white/80 mb-10 font-medium leading-relaxed max-w-md">
+                        Real-time inventory intelligence, expiry monitoring, billing, analytics, and AI-powered operations—all in one premium platform.
+                    </motion.p>
+
+                    <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 gap-y-5 gap-x-8">
+                        {[
+                            { text: "Multi-Branch Inventory", icon: <Database size={20} /> },
+                            { text: "Expiry Intelligence", icon: <Activity size={20} /> },
+                            { text: "Live Analytics", icon: <TrendingUp size={20} /> },
+                            { text: "Compliance Ready", icon: <ShieldCheck size={20} /> },
+                        ].map((feature, idx) => (
+                            <motion.div key={idx} variants={itemVariants} className="flex items-center gap-3 text-white/95">
+                                <div className="text-emerald">{feature.icon}</div>
+                                <span className="font-semibold text-sm tracking-wide">{feature.text}</span>
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                </motion.div>
+
+                {/* Bottom: Floating Status Card */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.6 }}
+                    className="relative z-10 w-full max-w-sm mt-auto"
+                >
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-5 shadow-premium animate-float">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <span className="relative flex h-2.5 w-2.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald"></span>
+                                </span>
+                                <span className="text-xs font-bold text-white tracking-widest uppercase">System Health: 99.9%</span>
+                            </div>
+                            <span className="text-[10px] font-semibold text-white/60">Updated 5s ago</span>
+                        </div>
+                        <div className="flex items-center gap-4 bg-navy/40 rounded-xl p-3 border border-white/10">
+                            <CheckCircle2 className="text-emerald" size={24} />
+                            <div className="flex flex-col">
+                                <span className="text-sm font-bold text-white">All systems operational</span>
+                                <span className="text-xs font-medium text-white/60">Inventory synced across branches</span>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+
+            {/* ════════════════════════════════════════
+                RIGHT PANEL — Authentication Form
+                ════════════════════════════════════════ */}
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative bg-canvas">
+                {/* Subtle Background Pattern for Right Side */}
+                <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] opacity-50"></div>
+
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="w-full max-w-[440px] relative z-10"
+                >
+                    <div className="bg-white/90 backdrop-blur-2xl rounded-3xl p-8 sm:p-12 shadow-premium border border-white transition-all duration-300">
                         
-                        {/* Responsive Header for Mobile & Tablet */}
-                        <div className="lg:hidden flex flex-col items-center mb-4 text-center">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--brand-dim)] border border-[var(--brand)]/30 flex-shrink-0 animate-pulse">
-                                    <span className="text-xl select-none">💊</span>
+                        {/* Mobile Logo */}
+                        <div className="lg:hidden flex justify-center mb-10">
+                             <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-2xl bg-navy flex items-center justify-center shadow-lg">
+                                    <Pill className="text-brand-cyan" size={24} />
                                 </div>
-                                <div className="flex flex-col text-left">
-                                    <span className="text-lg font-black tracking-tight leading-none text-[var(--text-primary)] font-serif" style={{ fontFamily: "'Lora', serif" }}>SMAART</span>
-                                    <span className="text-[9px] font-bold tracking-widest text-[var(--brand)] uppercase leading-none mt-1">PHARMACY</span>
+                                <div>
+                                    <h2 className="text-2xl font-bold tracking-tight font-outfit text-navy leading-none">SMAART</h2>
+                                    <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-brand mt-1 leading-none">Pharmacy</p>
                                 </div>
                             </div>
-                            <p className="text-xs text-[var(--text-secondary)] max-w-xs">
-                                Real-time intelligence for Indian multi-branch pharmacy chains
-                            </p>
                         </div>
 
-                        {/* Title */}
-                        <div className="flex flex-col gap-1.5 text-center lg:text-left">
-                            <h2 className="text-3xl font-extrabold text-[var(--text-primary)] font-serif tracking-tight" style={{ fontFamily: "'Lora', serif" }}>
-                                Welcome Back
-                            </h2>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                                Sign in to your pharmacy dashboard
-                            </p>
+                        <div className="mb-10 text-center lg:text-left">
+                            <h2 className="text-3xl font-extrabold text-navy font-manrope tracking-tight mb-3">Welcome Back</h2>
+                            <p className="text-sm text-navy-muted font-medium">Sign in to continue to your workspace.</p>
                         </div>
 
-                        {/* Error State */}
-                        {displayError && (
-                            <div
-                                className="flex items-center gap-3 p-3.5 rounded-xl text-xs animate-fade-in bg-[var(--card-border)]/20 border border-[var(--text-danger)]/20 text-[var(--text-danger)]"
-                            >
-                                <span className="material-symbols-rounded text-base flex-shrink-0">error</span>
-                                <span className="font-semibold">{displayError}</span>
-                            </div>
-                        )}
+                        <AnimatePresence>
+                            {displayError && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0, y: -10 }}
+                                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mb-6 bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm font-bold flex items-center gap-3 shadow-sm"
+                                >
+                                    <ShieldCheck size={18} className="flex-shrink-0" />
+                                    <span>{displayError}</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                        {/* Form */}
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                            {/* Username */}
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                                    Username
-                                </label>
-                                <div className="relative">
-                                    <span
-                                        className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-base pointer-events-none transition-colors duration-200"
-                                        style={{ color: focused === 'username' ? 'var(--brand)' : 'var(--text-muted)' }}
-                                    >
-                                        person
-                                    </span>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Username Field */}
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-bold uppercase tracking-widest text-navy-muted ml-1">Username</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <User size={18} className={`transition-colors duration-200 ${focused === 'username' ? 'text-brand' : 'text-slate-400'}`} />
+                                    </div>
                                     <input
-                                        id="login-username"
                                         type="text"
                                         autoComplete="username"
                                         placeholder="Enter your username"
                                         value={username}
-                                        onChange={e => setUsername(e.target.value)}
-                                        onFocus={() => handleFocus('username')}
-                                        onBlur={handleBlur}
-                                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs font-semibold transition-all duration-200 outline-none bg-[var(--app-bg)] text-[var(--text-primary)] border"
-                                        style={{
-                                            borderColor: focused === 'username' ? 'var(--brand)' : 'var(--card-border)',
-                                        }}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        onFocus={() => setFocused('username')}
+                                        onBlur={() => setFocused(null)}
+                                        className="w-full pl-11 pr-4 py-4 bg-canvas hover:bg-slate-50 focus:bg-white border-2 border-transparent focus:border-brand-dim rounded-2xl text-sm font-semibold text-navy transition-all duration-300 outline-none shadow-sm focus:shadow-glow placeholder:text-slate-400"
                                     />
                                 </div>
                             </div>
 
-                            {/* Password */}
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                                    Password
-                                </label>
-                                <div className="relative">
-                                    <span
-                                        className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-base pointer-events-none transition-colors duration-200"
-                                        style={{ color: focused === 'password' ? 'var(--brand)' : 'var(--text-muted)' }}
-                                    >
-                                        lock
-                                    </span>
+                            {/* Password Field */}
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-bold uppercase tracking-widest text-navy-muted ml-1">Password</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Lock size={18} className={`transition-colors duration-200 ${focused === 'password' ? 'text-brand' : 'text-slate-400'}`} />
+                                    </div>
                                     <input
-                                        id="login-password"
                                         type={showPass ? 'text' : 'password'}
                                         autoComplete="current-password"
                                         placeholder="Enter your password"
                                         value={password}
-                                        onChange={e => setPassword(e.target.value)}
-                                        onFocus={() => handleFocus('password')}
-                                        onBlur={handleBlur}
-                                        className="w-full pl-10 pr-12 py-3 rounded-xl text-xs font-semibold transition-all duration-200 outline-none bg-[var(--app-bg)] text-[var(--text-primary)] border"
-                                        style={{
-                                            borderColor: focused === 'password' ? 'var(--brand)' : 'var(--card-border)',
-                                        }}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        onFocus={() => setFocused('password')}
+                                        onBlur={() => setFocused(null)}
+                                        className="w-full pl-11 pr-12 py-4 bg-canvas hover:bg-slate-50 focus:bg-white border-2 border-transparent focus:border-brand-dim rounded-2xl text-sm font-semibold text-navy transition-all duration-300 outline-none shadow-sm focus:shadow-glow placeholder:text-slate-400"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPass(!showPass)}
-                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-navy transition-colors duration-200 focus:outline-none"
                                     >
-                                        <span className="material-symbols-rounded text-base">
-                                            {showPass ? 'visibility_off' : 'visibility'}
-                                        </span>
+                                        {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Role indicator after successful login */}
-                            {successRole && (
-                                <div className="text-xs font-semibold text-[var(--brand)] text-center lg:text-left animate-pulse py-1">
-                                    Logged in as {successRole} — redirecting to your dashboard...
-                                </div>
-                            )}
+                            {/* Success Overlay / Message */}
+                            <AnimatePresence>
+                                {successRole && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="text-center text-sm font-bold text-brand bg-brand-dim py-3 rounded-xl border border-brand/20"
+                                    >
+                                        Authentication successful. Loading workspace...
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             {/* Submit Button */}
-                            <button
-                                id="login-submit"
+                            <motion.button
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.98 }}
                                 type="submit"
                                 disabled={isSubmitting || !!successRole}
-                                className="mt-2 w-full py-3.5 rounded-xl text-xs font-black transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg bg-[var(--brand)] hover:shadow-xl"
+                                className="w-full mt-8 py-4 bg-primary-gradient text-white rounded-2xl text-base font-extrabold shadow-premium hover:shadow-premium-hover transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed animate-breathe hover:animate-none"
                             >
-                                {isSubmitting || successRole ? (
-                                    <>
-                                        <span className="material-symbols-rounded animate-spin text-base">sync</span>
-                                        <span>Signing in...</span>
-                                    </>
+                                {isSubmitting ? (
+                                    <motion.div 
+                                        animate={{ rotate: 360 }} 
+                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    >
+                                        <Activity size={20} />
+                                    </motion.div>
                                 ) : (
                                     <>
                                         <span>Sign In</span>
-                                        <span className="material-symbols-rounded text-base">arrow_forward</span>
+                                        <motion.span 
+                                            className="inline-block"
+                                            animate={{ x: [0, 4, 0] }}
+                                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                        >
+                                            →
+                                        </motion.span>
                                     </>
                                 )}
-                            </button>
+                            </motion.button>
                         </form>
 
-                        {/* Footer info */}
-                        <p className="text-center text-xs text-[var(--text-secondary)]">
-                            Session-based authentication · Cookies required
-                        </p>
-                    </div>
-
-                    {/* Bottom branding footer */}
-                    <div className="text-center text-xs text-[var(--text-secondary)] select-none">
-                        © 2026 SMAART Healthcare Systems Private Limited.
-                    </div>
-                </div>
-            </div>
-
-            {/* ════════════════════════════════════════
-                LOGIN TRANSITION OVERLAY
-                ════════════════════════════════════════ */}
-            {(transitionPhase === 'show-logo' || transitionPhase === 'fade-out') && (
-                <div 
-                    className={`absolute inset-0 flex flex-col items-center justify-center z-50 bg-[var(--app-bg)] transition-opacity duration-300 ${logoOpacityClass}`}
-                >
-                    <div className="flex flex-col items-center gap-4 text-center">
-                        <span className="text-6xl select-none animate-bounce">💊</span>
-                        <div className="flex flex-col items-center mt-2">
-                            <span className="text-4xl font-black text-[var(--text-primary)] font-serif tracking-tight leading-none" style={{ fontFamily: "'Lora', serif" }}>
-                                SMAART
-                            </span>
-                            <span className="text-xs font-bold tracking-[0.3em] text-[var(--brand)] uppercase mt-2">
-                                PHARMACY
-                            </span>
+                        {/* Security Note */}
+                        <div className="mt-10 flex justify-center items-center gap-2 text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+                            <Lock size={12} />
+                            <span>Session secured with encrypted authentication</span>
                         </div>
                     </div>
-                </div>
-            )}
+
+                    {/* Footer */}
+                    <div className="mt-8 text-center text-xs font-semibold text-slate-400/80">
+                        © {new Date().getFullYear()} SMAART Healthcare Systems Pvt. Ltd.
+                    </div>
+                </motion.div>
+            </div>
         </div>
     );
 }

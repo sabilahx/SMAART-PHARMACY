@@ -20,9 +20,9 @@ function TransactionRow({ t, onView }) {
 
     return (
         <div
-            className="grid items-center px-6 py-3 rounded-lg transition-all duration-300 group cursor-pointer"
+            className="grid items-center px-6 py-3 rounded-xl transition-all duration-300 group cursor-pointer"
             style={{
-                gridTemplateColumns: '1.8fr 1fr 1.1fr 90px 1fr 1.2fr 80px',
+                gridTemplateColumns: 'minmax(200px, 2fr) minmax(110px, 1fr) minmax(130px, 1.2fr) minmax(70px, 0.7fr) minmax(180px, 1.5fr) minmax(180px, 1.8fr) 70px',
                 gap: '16px',
                 background: 'transparent',
             }}
@@ -35,16 +35,16 @@ function TransactionRow({ t, onView }) {
             onClick={() => onView(t._id)}
         >
             {/* Medicine */}
-            <div className="flex flex-col min-w-0">
+            <div className="flex flex-col min-w-0 pr-2">
                 {t.medicineId ? (
                     <>
                         <span
-                            className="text-sm font-bold truncate transition-colors duration-200 group-hover:text-[#00B4D8]"
-                            style={{ color: 'var(--text-primary)', fontFamily: "'Lora', serif" }}
+                            className="text-sm font-semibold truncate transition-colors duration-200 group-hover:text-[#00B4D8]"
+                            style={{ color: 'var(--text-primary)' }}
                         >
                             {t.medicineId.name}
                         </span>
-                        <span className="text-xs font-mono tracking-wider mt-0.5 opacity-60" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-[11px] font-mono tracking-wider mt-0.5 opacity-60" style={{ color: 'var(--text-muted)' }}>
                             {t.medicineId.ndc}
                         </span>
                     </>
@@ -55,10 +55,10 @@ function TransactionRow({ t, onView }) {
 
             {/* Date */}
             <div className="flex flex-col">
-                <span className="text-xs font-semibold text-[var(--text-primary)]">
+                <span className="text-xs font-medium text-[var(--text-primary)]">
                     {new Date(t.createdAt).toLocaleDateString()}
                 </span>
-                <span className="text-xs opacity-60" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-[11px] opacity-60" style={{ color: 'var(--text-muted)' }}>
                     {new Date(t.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
             </div>
@@ -66,7 +66,7 @@ function TransactionRow({ t, onView }) {
             {/* Type badge */}
             <div>
                 <span
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap"
                     style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}
                 >
                     <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>{cfg.icon}</span>
@@ -76,36 +76,36 @@ function TransactionRow({ t, onView }) {
 
             {/* Qty */}
             <div>
-                <span className="text-sm font-black" style={{ color: qtyColor, fontFamily: "'Lora', serif" }}>
+                <span className="text-sm font-bold font-mono" style={{ color: qtyColor }}>
                     {isPositive ? `+${qty.toLocaleString('en-IN')}` : qty.toLocaleString('en-IN')}
                 </span>
             </div>
 
-            {/* User */}
-            <div className="flex flex-col min-w-0">
+            {/* User & Branch */}
+            <div className="flex flex-col min-w-0 pr-2 overflow-hidden">
                 <div
-                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold w-fit border border-[var(--card-border)]"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium max-w-full overflow-hidden border border-[var(--card-border)]"
                     style={{ background: 'transparent', color: 'var(--text-secondary)' }}
                 >
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#00B4D8' }} />
-                    {t.userId?.username || 'System'}
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#00B4D8' }} />
+                    <span className="truncate text-xs">{t.userId?.username || 'System'}</span>
                 </div>
                 {t.pharmacyId && (
-                    <span className="text-xs text-[var(--text-secondary)] font-bold mt-1 truncate" title={t.pharmacyId.name}>
+                    <span className="text-xs text-[var(--text-secondary)] font-normal mt-1 truncate block" title={t.pharmacyId.name}>
                         {t.pharmacyId.name}
                     </span>
                 )}
             </div>
 
             {/* Reason / notes */}
-            <div className="min-w-0">
+            <div className="min-w-0 pr-2 overflow-hidden flex flex-col justify-center">
                 {t.reason && (
-                    <span className="text-xs font-semibold block truncate" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="text-xs font-medium block truncate" style={{ color: 'var(--text-secondary)' }}>
                         {t.reason}
                     </span>
                 )}
                 {t.notes && (
-                    <span className="text-xs block truncate opacity-60" style={{ color: 'var(--text-muted)' }}>
+                    <span className="text-[11px] block truncate opacity-70 mt-0.5" style={{ color: 'var(--text-muted)' }}>
                         {t.notes}
                     </span>
                 )}
@@ -115,7 +115,7 @@ function TransactionRow({ t, onView }) {
             <div className="flex justify-end" onClick={e => e.stopPropagation()}>
                 <button
                     onClick={() => onView(t._id)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 opacity-0 group-hover:opacity-100 bg-[var(--card-bg)] hover:bg-[var(--brand-dim)] text-[var(--text-secondary)] hover:text-[var(--brand)] border border-[var(--card-border)]"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 opacity-0 group-hover:opacity-100 bg-[var(--card-bg)] hover:bg-[var(--brand-dim)] text-[var(--text-secondary)] hover:text-[var(--brand)] border border-[var(--card-border)] whitespace-nowrap"
                 >
                     <span className="material-symbols-rounded text-xs">receipt_long</span>
                     <span>Detail</span>
@@ -270,24 +270,26 @@ export default function InventoryHistory() {
 
             {/* Filter bar */}
             <div
-                className="p-3 flex flex-col sm:flex-row items-center gap-3 backdrop-blur-md premium-card shadow-sm"
+                className="p-3 flex flex-col xl:flex-row items-start xl:items-center gap-3 backdrop-blur-md premium-card shadow-sm w-full"
             >
                 {/* Search */}
-                <div className="relative flex-1 w-full">
+                <div className="relative w-full flex-1">
                     <span className="material-symbols-rounded absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none" style={{ color: 'var(--text-muted)' }}>search</span>
                     <input
                         type="text"
                         placeholder="Search by medicine name, NDC, user, batch, supplier..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 rounded-lg text-xs outline-none transition-all duration-200 bg-[var(--card-bg)] border border-[var(--card-border)] focus:border-[var(--brand)] text-[var(--text-primary)]"
+                        className="w-full pl-9 pr-4 py-2.5 rounded-lg text-xs outline-none transition-all duration-200 bg-[var(--card-bg)] border border-[var(--card-border)] focus:border-[var(--brand)] text-[var(--text-primary)]"
                     />
                 </div>
 
                 {/* Type filter pills */}
                 <div
-                    className="flex items-center gap-0.5 p-0.5 rounded-lg flex-shrink-0 flex-wrap border border-[var(--card-border)] bg-[var(--card-bg)] shadow-sm"
+                    className="flex items-center gap-1 p-1 rounded-lg w-full xl:w-auto overflow-x-auto border border-[var(--card-border)] bg-[var(--card-bg)] shadow-sm"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
+                    <style dangerouslySetInnerHTML={{ __html: `.overflow-x-auto::-webkit-scrollbar { display: none; }` }} />
                     {['All', 'Receive Stock', 'Dispense Stock', 'Adjustment', 'Expired', 'Archived'].map(f => {
                         const cfg = TYPE_CONFIG[f];
                         const isActive = typeFilter === f;
@@ -295,7 +297,7 @@ export default function InventoryHistory() {
                             <button
                                 key={f}
                                 onClick={() => setTypeFilter(f)}
-                                className="px-3 py-1 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap"
+                                className="px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap flex-shrink-0"
                                 style={{
                                     background: isActive ? (cfg ? `${cfg.color}15` : 'var(--brand-dim)') : 'transparent',
                                     color: isActive ? (cfg ? cfg.color : 'var(--brand)') : 'var(--text-secondary)',
@@ -320,12 +322,12 @@ export default function InventoryHistory() {
             <div
                 className="overflow-hidden backdrop-blur-md overflow-x-auto w-full scrollable premium-card shadow-sm border border-[var(--card-border)]"
             >
-                <div className="min-w-[850px]">
+                <div className="min-w-[1000px]">
                     {/* Table header */}
                     <div
-                        className="grid px-6 py-3 text-xs font-bold uppercase tracking-wide"
+                        className="grid px-6 py-3 text-xs font-semibold uppercase tracking-wider border-b border-[var(--card-border)]"
                         style={{
-                            gridTemplateColumns: '1.8fr 1fr 1.1fr 90px 1fr 1.2fr 80px',
+                            gridTemplateColumns: 'minmax(200px, 2fr) minmax(110px, 1fr) minmax(130px, 1.2fr) minmax(70px, 0.7fr) minmax(180px, 1.5fr) minmax(180px, 1.8fr) 70px',
                             gap: '16px',
                             color: 'var(--text-muted)',
                         }}
@@ -346,7 +348,7 @@ export default function InventoryHistory() {
                                 <div className="absolute inset-0 animate-shimmer" />
                                 {Array.from({ length: 6 }).map((_, idx) => (
                                     <div key={idx} className="grid items-center py-3.5 gap-4 border-b border-[var(--card-border)]"
-                                        style={{ gridTemplateColumns: '1.8fr 1fr 1.1fr 90px 1fr 1.2fr 80px' }}>
+                                        style={{ gridTemplateColumns: 'minmax(200px, 2fr) minmax(110px, 1fr) minmax(130px, 1.2fr) minmax(70px, 0.7fr) minmax(180px, 1.5fr) minmax(180px, 1.8fr) 70px' }}>
                                         <div className="w-3/4 h-3.5 rounded bg-[var(--bg-secondary)]" />
                                         <div className="w-16 h-3 rounded bg-[var(--bg-secondary)]" />
                                         <div className="w-20 h-5 rounded bg-[var(--bg-secondary)]" />

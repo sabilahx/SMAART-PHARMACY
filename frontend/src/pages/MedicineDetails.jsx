@@ -110,18 +110,14 @@ export default function MedicineDetails() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => navigate(`/medicines/edit/${medicine._id}`)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200"
-                        style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--table-row-hover)] hover:text-[var(--text-primary)] border border-[var(--card-border)]"
                     >
                         <span className="material-symbols-rounded text-base">edit</span>
                         <span>Edit Details</span>
                     </button>
                     <button
                         onClick={() => navigate('/medicines')}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200"
-                        style={{ background: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)' }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--table-row-hover)] hover:text-[var(--text-primary)] border border-[var(--card-border)]"
                     >
                         <span className="material-symbols-rounded text-base">arrow_back</span>
                         <span>Back</span>
@@ -199,10 +195,7 @@ export default function MedicineDetails() {
                 <div className="lg:col-span-2 flex flex-col gap-4">
                     {/* Medicine header card */}
                     <div
-                        className="rounded-lg p-5 relative overflow-hidden backdrop-blur-md"
-                        style={{
-                            background: 'rgba(15,20,32,0.3)',
-                        }}
+                        className="rounded-xl p-5 relative overflow-hidden backdrop-blur-md premium-card"
                     >
                         {/* Glow backing */}
                         <div className="absolute top-0 right-0 w-48 h-48 pointer-events-none rounded-full" 
@@ -260,8 +253,7 @@ export default function MedicineDetails() {
                             { label: 'Unit Cost', value: `₹${medicine.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: 'per unit', color: '#00B4D8', icon: 'payments' },
                             { label: 'Asset Value', value: `₹${assetValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, sub: 'total valuation', color: '#a78bfa', icon: 'account_balance_wallet' },
                         ].map(k => (
-                            <div key={k.label} className="rounded-lg p-4 flex flex-col gap-2 backdrop-blur-md"
-                                style={{ background: 'rgba(15,20,32,0.3)' }}>
+                            <div key={k.label} className="rounded-xl p-4 flex flex-col gap-2 backdrop-blur-md premium-card">
                                 <div className="w-7 h-7 rounded-md flex items-center justify-center"
                                     style={{ background: `${k.color}08` }}>
                                     <span className="material-symbols-rounded text-base" style={{ color: k.color, fontVariationSettings: "'FILL' 1" }}>{k.icon}</span>
@@ -276,8 +268,7 @@ export default function MedicineDetails() {
                     </div>
 
                     {/* Stock actions */}
-                    <div className="rounded-lg p-4 flex flex-col gap-3 backdrop-blur-md"
-                        style={{ background: 'rgba(15,20,32,0.3)' }}>
+                    <div className="rounded-xl p-4 flex flex-col gap-3 backdrop-blur-md premium-card">
                         <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Inventory Actions</span>
                         <div className="grid grid-cols-3 gap-3">
                             {[
@@ -300,8 +291,7 @@ export default function MedicineDetails() {
                     </div>
 
                     {/* Details grid */}
-                    <div className="rounded-lg p-5 flex flex-col gap-4 backdrop-blur-md"
-                        style={{ background: 'rgba(15,20,32,0.3)' }}>
+                    <div className="rounded-xl p-5 flex flex-col gap-4 backdrop-blur-md premium-card">
                         <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Record Overview</span>
                         <div className="grid grid-cols-2 gap-4">
                             <DetailField label="Medicine Name" value={medicine.name} />
@@ -322,8 +312,8 @@ export default function MedicineDetails() {
                         Transaction History ({logs.length})
                     </span>
                     <div
-                        className="rounded-lg flex-1 overflow-hidden backdrop-blur-md"
-                        style={{ background: 'rgba(15,20,32,0.3)', maxHeight: '600px', overflowY: 'auto' }}
+                        className="rounded-xl flex-1 overflow-hidden backdrop-blur-md premium-card"
+                        style={{ maxHeight: '600px', overflowY: 'auto' }}
                     >
                         {logs.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: 'var(--text-muted)' }}>
@@ -334,7 +324,7 @@ export default function MedicineDetails() {
                             <div className="p-4 flex flex-col gap-0">
                                 {/* Timeline line */}
                                 <div className="relative">
-                                    <div className="absolute left-3.5 top-0 bottom-0 w-px" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                                    <div className="absolute left-3.5 top-0 bottom-0 w-px bg-[var(--card-border)]" />
                                     <div className="flex flex-col gap-4">
                                         {logs.map((log) => {
                                             const displayType = log.transactionType === 'Stock In' ? 'Receive Stock' : log.transactionType === 'Stock Out' ? 'Dispense Stock' : log.transactionType;
@@ -351,7 +341,7 @@ export default function MedicineDetails() {
                                                     </div>
  
                                                     {/* Content */}
-                                                    <div className="flex flex-col gap-1.5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                                    <div className="flex flex-col gap-1.5 pb-4 border-b border-[var(--card-border)]">
                                                         <div className="flex items-center justify-between">
                                                             <span
                                                                 className="text-xs font-semibold cursor-pointer hover:text-[#00B4D8] transition-colors"
@@ -365,10 +355,7 @@ export default function MedicineDetails() {
                                                             </span>
                                                         </div>
 
-                                                        <div
-                                                            className="flex items-center gap-2 px-2.5 py-1 rounded-lg"
-                                                            style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}
-                                                        >
+                                                        <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)]">
                                                             <span className="text-xs font-bold" style={{ color: qty > 0 ? '#34d399' : qty < 0 ? '#f87171' : 'var(--text-muted)' }}>
                                                                 {qty > 0 ? `+${qty.toLocaleString('en-IN')}` : qty.toLocaleString('en-IN')}
                                                             </span>

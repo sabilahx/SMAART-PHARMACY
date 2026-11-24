@@ -16,18 +16,10 @@ export default function PurchaseOrders() {
     const [activeTab, setActiveTab] = useState('Procurement');
 
     // Modals
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-    // Form inputs
-    const [supplierId, setSupplierId] = useState('');
-    const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
-    const [notes, setNotes] = useState('');
-    const [status, setStatus] = useState('Draft');
-    const [poItems, setPoItems] = useState([{ medicineId: '', quantity: 100, unitCost: 0 }]);
-    const [formError, setFormError] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+    const navigate = useNavigate();
 
     // Retrieve initial data
     const fetchPOData = async () => {
@@ -76,80 +68,7 @@ export default function PurchaseOrders() {
     useEffect(() => {
         fetchPOData();
     }, [user, activeBranch]);
-
-    // Handle Item Fields Addition in Form
-    const handleAddItemRow = () => {
-        setPoItems([...poItems, { medicineId: '', quantity: 100, unitCost: 0 }]);
-    };
-
-    const handleRemoveItemRow = (index) => {
-        if (poItems.length === 1) return;
-        const newItems = [...poItems];
-        newItems.splice(index, 1);
-        setPoItems(newItems);
-    };
-
-    const handleItemChange = (index, field, value) => {
-        const newItems = [...poItems];
-        newItems[index][field] = value;
-
-        // Auto-fill Unit Cost if medicineId selection changes
-        if (field === 'medicineId') {
-            const med = medicines.find(m => m._id === value);
-            if (med) {
-                newItems[index].unitCost = med.supplierCost || 0;
-            }
-        }
-        setPoItems(newItems);
-    };
-
-    // Calculate Grand Total
-    const calculateGrandTotal = () => {
-        return poItems.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitCost)), 0);
-    };
-
-    // Handle Create PO Submission
-    const handleCreatePOSubmit = async (e) => {
-        e.preventDefault();
-        setFormError('');
-        if (!supplierId || poItems.some(item => !item.medicineId || item.quantity <= 0)) {
-            setFormError('Supplier and valid medicine rows are required.');
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            const url = activeBranch?.id ? `/api/purchase-orders?branchId=${activeBranch.id}` : '/api/purchase-orders';
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    supplierId,
-                    expectedDeliveryDate,
-                    status,
-                    notes,
-                    medicines: poItems.map(item => ({
-                        medicineId: item.medicineId,
-                        quantity: Number(item.quantity),
-                        unitCost: Number(item.unitCost)
-                    }))
-                })
-            });
-
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.message || 'Failed to generate PO.');
-            }
-
-            setIsCreateOpen(false);
-            resetForm();
-            fetchPOData();
-        } catch (err) {
-            setFormError(err.message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
+    // Form handling moved to AddPurchaseOrder.jsx
 
     // Handle Status Change Action (Admin Only)
     const handleStatusTransition = async (orderId, targetStatus) => {
@@ -181,15 +100,7 @@ export default function PurchaseOrders() {
         }
     };
 
-    const resetForm = () => {
-        setSupplierId('');
-        setExpectedDeliveryDate('');
-        setNotes('');
-        setStatus('Draft');
-        setPoItems([{ medicineId: '', quantity: 100, unitCost: 0 }]);
-        setFormError('');
-    };
-
+    // resetForm removed
     const handleViewDetails = (order) => {
         setSelectedOrder(order);
         setIsDetailsOpen(true);
@@ -212,7 +123,7 @@ export default function PurchaseOrders() {
                     </p>
                 </div>
                 <button 
-                    onClick={() => { resetForm(); setIsCreateOpen(true); }}
+                    onClick={() => navigate('/purchase-orders/add')}
                     className="px-5 py-2.5 rounded-xl bg-cyan-400 text-[var(--text-primary)] text-xs font-black hover:bg-cyan-300 cursor-pointer shadow-lg shadow-cyan-400/5 hover:shadow-cyan-400/20 transition-all flex items-center gap-1.5 self-start md:self-auto"
                 >
                     <span className="material-symbols-rounded text-sm font-black">add_shopping_cart</span>
@@ -379,169 +290,6 @@ export default function PurchaseOrders() {
                                 </div>
                             ))
                         )}
-                    </div>
-                </div>
-            )}
-            {/* Create Supplier Order Modal */}
-            {isCreateOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--card-bg)]/60 backdrop-blur-md px-4 overflow-y-auto">
-                    <div className="w-full max-w-2xl rounded-2xl p-6 premium-card-elevated border border-[var(--card-border)] shadow-2xl relative my-8 animate-slide-up">
-                        
-                        <button 
-                            onClick={() => setIsCreateOpen(false)}
-                            className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-                        >
-                            <span className="material-symbols-rounded">close</span>
-                        </button>
- 
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="material-symbols-rounded text-cyan-400 text-lg">shopping_cart</span>
-                            <h3 className="text-lg font-bold text-[var(--text-primary)] font-serif">Initiate Supplier Order</h3>
-                        </div>
-
-                        {formError && (
-                            <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold mb-4">
-                                {formError}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleCreatePOSubmit} className="flex flex-col gap-4">
-                            
-                            {/* Supplier & Expected Date */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Select Supplier</label>
-                                    <select 
-                                        required value={supplierId} onChange={(e) => setSupplierId(e.target.value)}
-                                        className="px-3 py-2 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    >
-                                        <option value="">-- Choose Vendor --</option>
-                                        {suppliers.map(s => (
-                                            <option key={s._id} value={s._id}>{s.name} (Health Score: {s.healthScore})</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Expected Delivery</label>
-                                    <input 
-                                        type="date" required
-                                        value={expectedDeliveryDate} onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-                                        className="px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Initial Status</label>
-                                    <select 
-                                        value={status} onChange={(e) => setStatus(e.target.value)}
-                                        className="px-3 py-2 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    >
-                                        <option value="Draft">Draft</option>
-                                        <option value="Pending Approval">Pending Approval</option>
-                                        {user?.role === 'Admin' && (
-                                            <>
-                                                <option value="Ordered">Ordered</option>
-                                                <option value="In Transit">In Transit</option>
-                                            </>
-                                        )}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <hr className="border-[var(--card-border)]" />
-
-                            {/* Dynamic Medicine Rows */}
-                            <div className="flex flex-col gap-2.5">
-                                <div className="flex items-center justify-between text-xs uppercase font-bold text-[var(--text-secondary)]">
-                                    <span>Medicine Items List</span>
-                                    <button 
-                                        type="button" onClick={handleAddItemRow}
-                                        className="text-cyan-400 hover:text-cyan-300 font-black flex items-center gap-0.5 cursor-pointer"
-                                    >
-                                        <span className="material-symbols-rounded text-xs">add</span> Add Medicine
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-col gap-2 max-h-44 overflow-y-auto pr-1">
-                                    {poItems.map((item, idx) => (
-                                        <div key={idx} className="flex gap-2 items-center">
-                                            
-                                            {/* Med select */}
-                                            <select 
-                                                required value={item.medicineId} 
-                                                onChange={(e) => handleItemChange(idx, 'medicineId', e.target.value)}
-                                                className="flex-1 px-2.5 py-2 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none"
-                                            >
-                                                <option value="">-- Select Medicine --</option>
-                                                {medicines.map(m => (
-                                                    <option key={m._id} value={m._id}>{m.name} (Stock: {m.stock})</option>
-                                                ))}
-                                            </select>
-
-                                            {/* Quantity */}
-                                            <input 
-                                                type="number" required min="1" placeholder="Qty"
-                                                value={item.quantity} onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                                                className="w-20 px-2.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none text-center"
-                                            />
-
-                                            {/* Unit cost */}
-                                            <input 
-                                                type="number" required min="0" step="0.01" placeholder="Unit Cost"
-                                                value={item.unitCost} onChange={(e) => handleItemChange(idx, 'unitCost', e.target.value)}
-                                                className="w-24 px-2.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none text-right font-mono"
-                                            />
-
-                                            {/* Line total */}
-                                            <span className="w-24 text-right text-xs font-bold text-[var(--text-secondary)] font-mono">
-                                                ₹{(item.quantity * item.unitCost).toFixed(2)}
-                                            </span>
-
-                                            {/* Delete */}
-                                            <button 
-                                                type="button" onClick={() => handleRemoveItemRow(idx)}
-                                                className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 cursor-pointer disabled:opacity-40"
-                                                disabled={poItems.length === 1}
-                                            >
-                                                <span className="material-symbols-rounded text-sm">delete</span>
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Total and Notes */}
-                            <div className="flex flex-col md:flex-row justify-between items-start gap-4 mt-2">
-                                <div className="flex-1 w-full flex flex-col gap-1.5">
-                                    <label className="text-xs uppercase font-bold text-[var(--text-secondary)]">Procurement Notes</label>
-                                    <input 
-                                        type="text" placeholder="E.g. standard monthly stock reorder"
-                                        value={notes} onChange={(e) => setNotes(e.target.value)}
-                                        className="w-full px-3.5 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--card-border)] text-xs text-[var(--text-primary)] outline-none focus:border-cyan-400/50"
-                                    />
-                                </div>
-                                <div className="flex flex-col items-end gap-1 font-mono text-right w-full md:w-auto">
-                                    <span className="text-xs uppercase font-bold text-[var(--text-secondary)]">Grand Total Cost</span>
-                                    <span className="text-xl font-black text-cyan-400">
-                                        ₹{calculateGrandTotal().toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 mt-4">
-                                <button 
-                                    type="button" onClick={() => setIsCreateOpen(false)}
-                                    className="flex-1 py-2.5 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--card-bg)]/10 text-xs font-bold text-[var(--text-secondary)] border border-[var(--card-border)] cursor-pointer transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit" disabled={submitting}
-                                    className="flex-1 py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-[var(--text-primary)] text-xs font-black cursor-pointer shadow-lg transition-all disabled:opacity-50"
-                                >
-                                    {submitting ? 'Creating...' : 'Confirm Order'}
-                                </button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             )}

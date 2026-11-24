@@ -216,15 +216,15 @@ function MedCard({ item, query, index, onView, onEdit }) {
             </div>
 
             {/* Body */}
-            <div className="flex flex-col px-4 pb-4 pt-3.5 gap-2 relative z-10">
-                <div className="flex flex-col gap-0.5">
-                    <span className="text-base font-extrabold tracking-tight leading-snug line-clamp-1 text-[var(--text-primary)] group-hover:text-[#00e5ff] transition-colors duration-200"
+            <div className="flex flex-col px-5 pb-5 pt-4 gap-3 relative z-10">
+                <div className="flex flex-col gap-1">
+                    <span className="text-lg font-extrabold tracking-tight leading-snug line-clamp-1 text-[var(--text-primary)] group-hover:text-[#00e5ff] transition-colors duration-200"
                         style={{ fontFamily: "'Lora', serif" }}>
                         <HighlightText text={item.name} query={query} />
                     </span>
                     
                     {/* Thin Stock Level Progress Bar */}
-                    <div className="w-full h-[3px] bg-[var(--card-border)] rounded-full overflow-hidden mt-1.5 mb-1 relative">
+                    <div className="w-full h-[3px] bg-[var(--card-border)] rounded-full overflow-hidden my-2 relative">
                         <div 
                             className="h-full rounded-full transition-all duration-500"
                             style={{ 
@@ -246,7 +246,7 @@ function MedCard({ item, query, index, onView, onEdit }) {
                 </div>
 
                 {/* Expiry / Stock Out warnings */}
-                <div className="flex flex-col gap-1 mt-0.5 min-h-[20px]">
+                <div className="flex flex-col gap-1.5 mt-0.5 min-h-[24px]">
                     {isExpired && (
                         <div className="text-xs font-extrabold px-2 py-0.5 rounded flex items-center gap-1.5 w-max"
                             style={{ background: 'rgba(248,113,113,0.06)', color: '#f87171', border: '1px solid rgba(248,113,113,0.12)' }}>
@@ -264,7 +264,7 @@ function MedCard({ item, query, index, onView, onEdit }) {
                 </div>
 
                 {/* Price + stock row */}
-                <div className="flex items-center justify-between pt-3 mt-1 border-t border-[var(--card-border)]">
+                <div className="flex items-center justify-between pt-4 mt-2 border-t border-[var(--card-border)]">
                     <div className="flex flex-col">
                         <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Unit Cost</span>
                         <span className="text-lg font-black text-[var(--text-primary)] mt-0.5" style={{ fontFamily: "'Lora', serif" }}>
@@ -375,99 +375,25 @@ export default function MedicineList() {
             {/* ── Unified Split Hero & Key Metrics Banner ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                 
-                {/* Left Area (Hero Typography + Search & Filters) */}
-                <div className="lg:col-span-8 flex flex-col gap-4">
-                    {/* Hero Typography */}
-                    <div className="flex flex-col gap-1.5 pt-1">
-                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                            Catalog Core
-                        </span>
-                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-primary)] leading-none" style={{ fontFamily: "'Lora', serif" }}>
-                            Intelligent <span className="text-sky-400">Medicine</span> Catalog
-                        </h2>
-                        <p className="text-[13px] max-w-lg leading-normal mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                            Monitor inventory health, track stock movements, and prevent shortages.
-                        </p>
-                    </div>
-
-                    {/* ── Command Bar Search & Filters ── */}
-                    <div className="p-4 rounded-xl flex flex-col gap-4 backdrop-blur-xl border border-[var(--card-border)] premium-card shadow-sm">
-                        
-                        {/* Search / Filter Row */}
-                        <div className="flex flex-col md:flex-row items-center gap-4">
-                            {/* Search Field */}
-                            <div className="relative flex-1 w-full">
-                                <span className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-lg pointer-events-none text-[var(--brand)]">search</span>
-                                <input 
-                                    ref={searchInputRef}
-                                    type="text" 
-                                    placeholder="Search medication name, NDC, category... (Press '/' to focus)" 
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full pl-11 pr-4 py-3 rounded-lg text-sm outline-none transition-all duration-200 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-primary)] focus:border-[var(--brand)]"
-                                />
-                            </div>
-
-                            {/* Status Selectors */}
-                            <div className="flex items-center rounded-lg p-1 gap-1 flex-shrink-0 w-full md:w-auto border border-[var(--card-border)] bg-[var(--card-bg)] shadow-sm">
-                                {['All', 'Active', 'Inactive', 'Archived'].map(f => (
-                                    <button key={f} onClick={() => setStatusFilter(f)}
-                                        className="flex-1 md:flex-initial px-4 py-2 rounded-md text-xs font-bold transition-all duration-200 cursor-pointer"
-                                        style={{
-                                            background: statusFilter === f ? 'var(--brand-dim)' : 'transparent',
-                                            color: statusFilter === f ? 'var(--brand)' : 'var(--text-secondary)',
-                                        }}>
-                                        {f}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* New Medicine Action */}
-                            {(user?.role === 'Pharmacist' || user?.role === 'Manager' || user?.role === 'Admin') && (
-                                <button
-                                    onClick={() => navigate('/medicines/add')}
-                                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer w-full md:w-auto flex-shrink-0 text-white hover:shadow-lg bg-[var(--brand)]"
-                                >
-                                    <span className="material-symbols-rounded text-lg">add</span>
-                                    <span>New Medicine</span>
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Category Selection Row */}
-                        <div className="flex gap-2 overflow-x-auto pb-1 scrollable">
-                            {CATEGORIES.map(cat => {
-                                const cc = CAT_COLORS[cat] || '#00e5ff';
-                                const active = categoryFilter === cat;
-                                const count = activeCategoryCounts[cat] || 0;
-                                return (
-                                    <button key={cat} onClick={() => setCategoryFilter(cat)}
-                                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0"
-                                        style={{
-                                            background: active ? `${cc}25` : 'transparent',
-                                            color: active ? cc : 'var(--text-secondary)',
-                                            border: active ? `1px solid ${cc}40` : '1px solid transparent',
-                                        }}>
-                                        {cat !== 'All' && <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1", color: active ? cc : 'inherit' }}>{CAT_ICONS[cat]}</span>}
-                                        <span>{cat}</span>
-                                        <span 
-                                            className="text-xs px-1.5 py-0.5 rounded-full font-mono ml-0.5 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-secondary)]"
-                                        >
-                                            {count}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                {/* Hero Typography */}
+                <div className="lg:col-span-5 flex flex-col gap-1.5 pt-1">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                        Catalog Core
+                    </span>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--text-primary)] leading-none" style={{ fontFamily: "'Lora', serif" }}>
+                        Intelligent <span className="text-sky-400">Medicine</span> Catalog
+                    </h2>
+                    <p className="text-[13px] max-w-lg leading-normal mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                        Monitor inventory health, track stock movements, and prevent shortages.
+                    </p>
                 </div>
 
                 {/* Right Area (Connected Metrics Panel) */}
-                <div className="lg:col-span-4 grid grid-cols-2 gap-4 lg:pl-4 self-start pt-2 lg:pt-0">
+                <div className="lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-4">
                     {/* Inventory Health Card */}
-                    <div className="rounded-lg p-3.5 flex flex-col gap-1.5 backdrop-blur-md premium-card shadow-sm border border-[var(--card-border)]">
+                    <div className="rounded-lg p-5 flex flex-col gap-3 backdrop-blur-md premium-card shadow-sm border border-[var(--card-border)]">
                         <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Inventory Health</span>
-                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                        <div className="flex items-baseline gap-2 mt-0.5">
                             <span className="text-3xl font-black leading-none tracking-tighter" style={{ fontFamily: "'Lora', serif", color: healthColor }}>
                                 <CountUp value={health} suffix="%" />
                             </span>
@@ -478,9 +404,9 @@ export default function MedicineList() {
                     </div>
 
                     {/* Stock Value Card */}
-                    <div className="rounded-lg p-3.5 flex flex-col gap-1.5 backdrop-blur-md premium-card shadow-sm border border-[var(--card-border)]">
+                    <div className="rounded-lg p-5 flex flex-col gap-3 backdrop-blur-md premium-card shadow-sm border border-[var(--card-border)]">
                         <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Stock Value</span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-3xl font-black text-[var(--text-primary)] leading-none tracking-tighter" style={{ fontFamily: "'Lora', serif" }}>
                                 <CountUp value={(totalValue/100000)} prefix="₹" suffix="L" />
                             </span>
@@ -492,17 +418,89 @@ export default function MedicineList() {
                     </div>
 
                     {/* Smart Insights list Card */}
-                    <div className="col-span-2 rounded-lg p-3.5 flex flex-col gap-2.5 backdrop-blur-md premium-card shadow-sm border border-[var(--card-border)]">
+                    <div className="col-span-2 md:col-span-1 rounded-lg p-5 flex flex-col gap-3 backdrop-blur-md premium-card shadow-sm border border-[var(--card-border)]">
                         <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Smart Insights</span>
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-2.5">
                             {insights.map((ins, i) => (
-                                <div key={i} className="flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ins.color }} />
-                                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{ins.text}</span>
+                                <div key={i} className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ins.color }} />
+                                    <span className="text-xs leading-snug" style={{ color: 'var(--text-secondary)' }} title={ins.text}>{ins.text}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* ── Command Bar Search & Filters (FULL WIDTH) ── */}
+            <div className="p-4 rounded-xl flex flex-col gap-4 backdrop-blur-xl border border-[var(--card-border)] premium-card shadow-sm w-full">
+                
+                {/* Search / Filter Row */}
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    {/* Search Field */}
+                    <div className="relative flex-1 w-full">
+                        <span className="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-lg pointer-events-none text-[var(--brand)]">search</span>
+                        <input 
+                            ref={searchInputRef}
+                            type="text" 
+                            placeholder="Search medication name, NDC, category... (Press '/' to focus)" 
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="w-full pl-11 pr-4 py-3 rounded-lg text-sm outline-none transition-all duration-200 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-primary)] focus:border-[var(--brand)]"
+                        />
+                    </div>
+
+                    {/* Status Selectors */}
+                    <div className="flex items-center rounded-lg p-1 gap-1 w-full md:w-auto border border-[var(--card-border)] bg-[var(--card-bg)] shadow-sm overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <style dangerouslySetInnerHTML={{ __html: `.overflow-x-auto::-webkit-scrollbar { display: none; }` }} />
+                        {['All', 'Active', 'Inactive', 'Archived'].map(f => (
+                            <button key={f} onClick={() => setStatusFilter(f)}
+                                className="flex-1 md:flex-initial px-4 py-2 rounded-md text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap"
+                                style={{
+                                    background: statusFilter === f ? 'var(--brand-dim)' : 'transparent',
+                                    color: statusFilter === f ? 'var(--brand)' : 'var(--text-secondary)',
+                                }}>
+                                {f}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* New Medicine Action */}
+                    {(user?.role === 'Pharmacist' || user?.role === 'Manager' || user?.role === 'Admin') && (
+                        <button
+                            onClick={() => navigate('/medicines/add')}
+                            className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer w-full md:w-auto flex-shrink-0 text-white hover:shadow-lg bg-[var(--brand)]"
+                        >
+                            <span className="material-symbols-rounded text-lg">add</span>
+                            <span>New Medicine</span>
+                        </button>
+                    )}
+                </div>
+
+                {/* Category Selection Row */}
+                <div className="flex gap-2 flex-wrap">
+                    {CATEGORIES.map(cat => {
+                        const cc = CAT_COLORS[cat] || '#00e5ff';
+                        const active = categoryFilter === cat;
+                        const count = activeCategoryCounts[cat] || 0;
+                        return (
+                            <button key={cat} onClick={() => setCategoryFilter(cat)}
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer"
+                                style={{
+                                    background: active ? `${cc}25` : 'transparent',
+                                    color: active ? cc : 'var(--text-primary)',
+                                    border: active ? `1px solid ${cc}40` : '1px solid var(--card-border)',
+                                }}>
+                                {cat !== 'All' && <span className="material-symbols-rounded text-xs" style={{ fontVariationSettings: "'FILL' 1", color: active ? cc : 'inherit' }}>{CAT_ICONS[cat]}</span>}
+                                <span>{cat}</span>
+                                <span 
+                                    className="text-xs px-1.5 py-0.5 rounded-full font-mono ml-0.5 bg-[var(--bg-secondary)] border border-[var(--card-border)] text-[var(--text-secondary)]"
+                                >
+                                    {count}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -527,8 +525,7 @@ export default function MedicineList() {
                     {Array.from({ length: 8 }).map((_, idx) => (
                         <div
                             key={idx}
-                            className="rounded-xl flex flex-col h-[185px] relative overflow-hidden border border-[var(--card-border)]"
-                            style={{ background: 'rgba(15,20,32,0.3)' }}
+                            className="rounded-xl flex flex-col h-[200px] relative overflow-hidden border border-[var(--card-border)] bg-[var(--card-bg)]"
                         >
                             {/* Skeleton Header */}
                             <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--card-border)] relative overflow-hidden">
